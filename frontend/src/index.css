@@ -1,0 +1,111 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f4f0;
+  --surface:   #ffffff;
+  --surface2:  #f9f8f5;
+  --border:    #e4e2db;
+  --border2:   #d0cec6;
+  --text:      #1a1916;
+  --text2:     #6b6860;
+  --text3:     #a8a69e;
+  --accent:    #1a56db;
+  --accent-bg: #eff4ff;
+  --accent-t:  #1e429f;
+  --success:   #057a55;
+  --success-bg:#def7ec;
+  --warn:      #92400e;
+  --warn-bg:   #fef3c7;
+  --danger:    #c81e1e;
+  --danger-bg: #fde8e8;
+  --radius:    6px;
+  --radius-lg: 10px;
+  --font:      'Inter', system-ui, sans-serif;
+  --mono:      'JetBrains Mono', monospace;
+  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  padding: 7px 14px; border-radius: var(--radius);
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--text); cursor: pointer; white-space: nowrap;
+  transition: all 0.12s; text-decoration: none;
+}
+.btn:hover { background: var(--surface2); border-color: var(--border2); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #1648c8; border-color: #1648c8; }
+.btn-danger  { background: var(--danger-bg); border-color: #f8b4b4; color: var(--danger); }
+.btn-danger:hover  { background: #fbd5d5; }
+.btn-success { background: var(--success-bg); border-color: #bcf0da; color: var(--success); }
+.btn-success:hover { background: #c6f6e2; }
+.btn-warn    { background: var(--warn-bg); border-color: #fcd34d; color: var(--warn); }
+.btn-sm { font-size: 12px; padding: 5px 10px; }
+.btn-icon { padding: 6px; border-radius: var(--radius); }
+
+/* Inputs */
+.input {
+  font-family: var(--font); font-size: 13px;
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); padding: 8px 12px; border-radius: var(--radius);
+  outline: none; width: 100%; transition: border-color 0.12s;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.08); }
+.input::placeholder { color: var(--text3); }
+
+/* Badge */
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 500; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warn    { background: var(--warn-bg);    color: var(--warn); }
+.badge-danger  { background: var(--danger-bg);  color: var(--danger); }
+.badge-info    { background: var(--accent-bg);  color: var(--accent-t); }
+.badge-gray    { background: #f0ede8; color: var(--text2); }
+
+/* Card */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase;
+     letter-spacing: 0.05em; color: var(--text2); padding: 10px 14px;
+     border-bottom: 1px solid var(--border); background: var(--surface2); }
+td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
