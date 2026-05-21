@@ -1,9 +1,10 @@
 import React from 'react'
+import logo from '../assets/wachak _logo.PNG'
 
 const SOCIAL = [
   {
     name: 'Facebook',
-    url: 'https://facebook.com',
+    url: 'https://www.facebook.com/share/18p5PwBXej/',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
@@ -21,7 +22,7 @@ const SOCIAL = [
   },
   {
     name: 'Instagram',
-    url: 'https://instagram.com',
+    url: 'https://www.instagram.com/wachak_lokshahicha?igsh=MzNlNGNkZWQ4Mg==',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -32,7 +33,7 @@ const SOCIAL = [
   },
   {
     name: 'YouTube',
-    url: 'https://youtube.com',
+    url: 'https://youtube.com/@wachaklokshahicha?si=0qYkJKkWMBdNMz1x',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
         <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.95C5.12 20 12 20 12 20s6.88 0 8.59-.47a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z"/>
@@ -140,10 +141,10 @@ export function Header({
 
       {/* Accent strip */}
       <div style={{
-        background: 'linear-gradient(90deg, var(--accent) 0%, #f0b840 100%)',
+        background: 'linear-gradient(90deg, #ED3429 0%, #ED3429 100%)',
         padding: '3px 0', textAlign: 'center',
         fontSize: 10, fontWeight: 700,
-        letterSpacing: '0.15em', color: '#000',
+        letterSpacing: '0.15em', color: 'var(--text)',
         textTransform: 'uppercase',
       }}>
         ◆ Daily ePaper Edition ◆
@@ -175,7 +176,7 @@ export function Header({
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
                 ePaper
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', letterSpacing: '0.03em' }}>
+              <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: '0.03em' }}>
                 {epaper ? epaper.title : 'Daily Digital Edition'}
               </div>
             </div>
@@ -185,7 +186,7 @@ export function Header({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
 
             {/* Edition label */}
-            <span style={{ fontSize: 11, color: 'var(--text3)', marginRight: 4 }}>
+            <span style={{ fontSize: 11, color: 'var(--text2)', marginRight: 4 }}>
               {fmt(date)}
             </span>
 
@@ -263,6 +264,9 @@ export function Header({
             )}
           </div>
         </div>
+        <div style={{
+          textAlign: 'center'
+        }}><img style={{ height: '100px'}}src={logo} alt='Wachak Logo' /></div>
       </div>
     </header>
   )

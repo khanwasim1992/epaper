@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { publicApi } from '../utils/api'
 
 const COLORS = ['#4f8ef7','#34d399','#f97316','#e879f9','#fbbf24','#60a5fa','#a78bfa','#fb7185']
-export const getRegionColor = (idx) => COLORS[idx % COLORS.length]
+const getColor = (idx) => COLORS[idx % COLORS.length]
 
-const SHARE_ICONS = {
+const ACTION_ICONS = {
   facebook: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
@@ -43,49 +43,83 @@ const SHARE_ICONS = {
       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
     </svg>
   ),
+  download: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  ),
+  print: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 9V2h12v7" />
+      <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+      <path d="M6 14h12v8H6z" />
+    </svg>
+  ),
+}
+
+const actionButtonStyle = {
+  width: 28,
+  height: 28,
+  borderRadius: 6,
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  color: 'var(--text2)',
+  textDecoration: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.15s',
 }
 
 export function RegionModal({ region, epaper, pageNum, onClose }) {
-  const [zoom, setZoom]         = useState(1)
-  const [pan, setPan]           = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
-  const [copied, setCopied]     = useState(false)
+  const [copied, setCopied] = useState(false)
   const dragStart = useRef(null)
-  const containerRef = useRef(null)
-
-  useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); setCopied(false) }, [region])
+  const imgRef = useRef(null)
 
   useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+    setCopied(false)
+  }, [region])
+
+  useEffect(() => {
+    const handler = (e) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
   if (!region || !epaper) return null
 
   const cropUrl = publicApi.cropUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
-  const color   = getRegionColor(region.color_idx ?? 0)
+  const color = getColor(region.color_idx ?? 0)
   const shareTitle = region.label || epaper.title || 'ePaper news'
   const shareText = region.notes ? `${shareTitle} - ${region.notes}` : shareTitle
   const encodedUrl = encodeURIComponent(cropUrl)
   const encodedText = encodeURIComponent(shareText)
+  const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
   const shareLinks = [
-    { name: 'Facebook', icon: SHARE_ICONS.facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-    { name: 'X', icon: SHARE_ICONS.x, href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}` },
-    { name: 'WhatsApp', icon: SHARE_ICONS.whatsapp, href: `https://wa.me/?text=${encodedText}%20${encodedUrl}` },
-    { name: 'Telegram', icon: SHARE_ICONS.telegram, href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
-    { name: 'LinkedIn', icon: SHARE_ICONS.linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
-    { name: 'Email', icon: SHARE_ICONS.email, href: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}` },
+    { name: 'Facebook', icon: ACTION_ICONS.facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+    { name: 'X', icon: ACTION_ICONS.x, href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}` },
+    { name: 'WhatsApp', icon: ACTION_ICONS.whatsapp, href: `https://wa.me/?text=${encodedText}%20${encodedUrl}` },
+    { name: 'Telegram', icon: ACTION_ICONS.telegram, href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
+    { name: 'LinkedIn', icon: ACTION_ICONS.linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
+    { name: 'Email', icon: ACTION_ICONS.email, href: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}` },
   ]
 
-  const zoomIn    = () => setZoom(z => Math.min(z + 0.25, 5))
-  const zoomOut   = () => setZoom(z => { const nz = Math.max(z - 0.25, 0.5); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz })
+  const zoomIn  = () => setZoom(z => Math.min(z + 0.25, 4))
+  const zoomOut = () => { setZoom(z => { const nz = Math.max(z - 0.25, 0.5); if (nz === 1) setPan({ x: 0, y: 0 }); return nz }) }
   const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
 
   const onWheel = useCallback((e) => {
     e.preventDefault()
     const delta = e.deltaY < 0 ? 0.15 : -0.15
-    setZoom(z => { const nz = Math.max(0.5, Math.min(5, z + delta)); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz })
+    setZoom(z => Math.max(0.5, Math.min(4, z + delta)))
   }, [])
 
   const onMouseDown = (e) => {
@@ -96,7 +130,10 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   }
   const onMouseMove = (e) => {
     if (!dragging || !dragStart.current) return
-    setPan({ x: dragStart.current.px + (e.clientX - dragStart.current.mx), y: dragStart.current.py + (e.clientY - dragStart.current.my) })
+    setPan({
+      x: dragStart.current.px + (e.clientX - dragStart.current.mx),
+      y: dragStart.current.py + (e.clientY - dragStart.current.my),
+    })
   }
   const onMouseUp = () => { setDragging(false); dragStart.current = null }
   const copyShareLink = async () => {
@@ -116,43 +153,72 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
       // User cancelled the native share sheet.
     }
   }
+  const printClip = () => {
+    const win = window.open('', '_blank', 'noopener,noreferrer')
+    if (!win) return
+    win.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${shareTitle}</title>
+          <style>
+            body { margin: 0; padding: 24px; font-family: Arial, sans-serif; text-align: center; }
+            img { max-width: 100%; height: auto; }
+            h1 { font-size: 18px; margin: 0 0 16px; }
+          </style>
+        </head>
+        <body>
+          <h1>${shareTitle}</h1>
+          <img src="${cropUrl}" alt="${shareTitle}" onload="window.print(); window.close();" />
+        </body>
+      </html>
+    `)
+    win.document.close()
+  }
 
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0,
-      background: 'rgba(0,0,0,0.85)',
-      zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20, backdropFilter: 'blur(4px)',
-      animation: 'fadeIn 0.18s ease',
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--surface)',
-        borderRadius: 12,
-        border: '1px solid var(--border)',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-        maxWidth: 840, width: '100%',
-        maxHeight: '92vh',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-        animation: 'fadeIn 0.2s ease',
-      }}>
-
-        {/* Colour accent strip */}
-        <div style={{ height: 3, background: color, flexShrink: 0 }} />
-
-        {/* Header */}
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(0,0,0,0.82)',
+        zIndex: 1000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 20,
+        backdropFilter: 'blur(4px)',
+        animation: 'fadeIn 0.18s ease',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--surface)',
+          borderRadius: 12,
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
+          maxWidth: 820,
+          width: '100%',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'fadeIn 0.2s ease',
+        }}
+      >
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexWrap: 'wrap', gap: 10,
           padding: '12px 18px',
           borderBottom: '1px solid var(--border)',
-          background: 'var(--surface2)', flexShrink: 0,
+          background: 'var(--surface2)',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 600 }}>{region.label}</span>
-            {region.notes && <span style={{ fontSize: 12, color: 'var(--text2)' }}>— {region.notes}</span>}
+            {region.notes && (
+              <span style={{ fontSize: 12, color: 'var(--text2)', marginLeft: 4 }}>- {region.notes}</span>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -163,13 +229,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
                   target={item.name === 'Email' ? undefined : '_blank'}
                   rel={item.name === 'Email' ? undefined : 'noopener noreferrer'}
                   title={`Share on ${item.name}`}
-                  style={{
-                    width: 28, height: 28, borderRadius: 6,
-                    background: 'var(--surface)', border: '1px solid var(--border)',
-                    color: 'var(--text2)', textDecoration: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s',
-                  }}
+                  style={actionButtonStyle}
                   onMouseEnter={e => {
                     e.currentTarget.style.color = 'var(--accent)'
                     e.currentTarget.style.borderColor = 'rgba(232,160,32,0.45)'
@@ -186,72 +246,106 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
                 onClick={nativeShare}
                 title={navigator.share ? 'Share news' : 'Copy news link'}
                 style={{
-                  width: 28, height: 28, borderRadius: 6,
+                  ...actionButtonStyle,
                   background: copied ? 'rgba(52,211,153,0.14)' : 'var(--surface)',
-                  border: `1px solid ${copied ? 'rgba(52,211,153,0.5)' : 'var(--border)'}`,
-                  color: copied ? '#34d399' : 'var(--text2)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
+                  borderColor: copied ? 'rgba(52,211,153,0.5)' : 'var(--border)',
+                  color: copied ? '#34d399' : 'var(--text2)',
                 }}
               >
-                {SHARE_ICONS.copy}
+                {ACTION_ICONS.copy}
+              </button>
+              <a href={cropUrl} download={downloadName} title="Download news clipping" style={actionButtonStyle}>
+                {ACTION_ICONS.download}
+              </a>
+              <button onClick={printClip} title="Print news clipping" style={actionButtonStyle}>
+                {ACTION_ICONS.print}
               </button>
             </div>
             {region.link_url && (
-              <a href={region.link_url} target="_blank" rel="noopener noreferrer" style={{
-                fontSize: 12, color: 'var(--accent)', textDecoration: 'none',
-                background: 'rgba(232,160,32,0.1)', padding: '4px 10px',
-                borderRadius: 20, border: '1px solid rgba(232,160,32,0.3)',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>🔗 Visit link</a>
+              <a
+                href={region.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: 12, color: 'var(--accent)', textDecoration: 'none',
+                  background: 'rgba(232,160,32,0.1)', padding: '4px 10px',
+                  borderRadius: 20, border: '1px solid rgba(232,160,32,0.3)',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                Visit link
+              </a>
             )}
-            <button onClick={onClose} style={{
-              width: 28, height: 28, borderRadius: 6,
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              color: 'var(--text2)', fontSize: 14,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            }}>✕</button>
+            <button
+              onClick={onClose}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                color: 'var(--text2)', fontSize: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >x</button>
           </div>
         </div>
 
-        {/* Zoom toolbar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '7px 16px',
+          padding: '8px 16px',
           background: 'var(--header)',
-          borderBottom: '1px solid var(--border)', flexShrink: 0,
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
         }}>
-          {[
-            { label: '−', action: zoomOut, disabled: zoom <= 0.5 },
-            { label: `${Math.round(zoom * 100)}%`, action: zoomReset, disabled: false, isLabel: true },
-            { label: '+', action: zoomIn,  disabled: zoom >= 5 },
-          ].map((btn, i) => (
-            <button key={i} onClick={btn.action} disabled={btn.disabled} style={{
+          <button onClick={zoomOut} disabled={zoom <= 0.5}
+            style={{
+              width: 30, height: 30, borderRadius: 6,
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              color: zoom > 0.5 ? 'var(--text)' : 'var(--text3)',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: zoom > 0.5 ? 'pointer' : 'not-allowed',
+            }}
+          >-</button>
+
+          <button onClick={zoomReset}
+            style={{
               height: 30, padding: '0 12px', borderRadius: 6,
               background: 'var(--surface2)', border: '1px solid var(--border)',
-              color: btn.disabled ? 'var(--text3)' : 'var(--text)',
-              fontSize: btn.isLabel ? 12 : 18, fontWeight: btn.isLabel ? 500 : 400,
-              cursor: btn.disabled ? 'not-allowed' : 'pointer', minWidth: btn.isLabel ? 58 : 30,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{btn.label}</button>
-          ))}
+              color: 'var(--text)', fontSize: 12, fontWeight: 500,
+              minWidth: 56, textAlign: 'center',
+            }}
+          >{Math.round(zoom * 100)}%</button>
+
+          <button onClick={zoomIn} disabled={zoom >= 4}
+            style={{
+              width: 30, height: 30, borderRadius: 6,
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              color: zoom < 4 ? 'var(--text)' : 'var(--text3)',
+              fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: zoom < 4 ? 'pointer' : 'not-allowed',
+            }}
+          >+</button>
+
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>Scroll to zoom · Drag to pan</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)' }}>Scroll to zoom - Drag to pan</span>
         </div>
 
-        {/* Image area */}
         <div
-          ref={containerRef}
+          ref={imgRef}
           onWheel={onWheel}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
           style={{
-            flex: 1, overflow: 'hidden',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#0d0d0d', minHeight: 200,
+            flex: 1,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#111',
             cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'default',
+            minHeight: 200,
+            position: 'relative',
           }}
         >
           <img
@@ -260,24 +354,26 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
             draggable={false}
             style={{
               maxWidth: zoom === 1 ? '100%' : 'none',
-              maxHeight: zoom === 1 ? '62vh' : 'none',
+              maxHeight: zoom === 1 ? '60vh' : 'none',
               width: zoom !== 1 ? `${zoom * 100}%` : undefined,
               objectFit: 'contain',
               transform: `translate(${pan.x}px, ${pan.y}px)`,
-              userSelect: 'none', display: 'block',
+              userSelect: 'none',
+              display: 'block',
               transition: dragging ? 'none' : 'transform 0.05s',
             }}
           />
         </div>
 
-        {/* Footer */}
         <div style={{
-          padding: '7px 16px',
-          background: 'var(--header)', borderTop: '1px solid var(--border)',
-          display: 'flex', justifyContent: 'space-between', flexShrink: 0,
+          padding: '8px 16px',
+          background: 'var(--header)',
+          borderTop: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'monospace' }}>
-            {Math.round(region.w)} × {Math.round(region.h)} px
+            {Math.round(region.w)} x {Math.round(region.h)} px
           </span>
           <span style={{ fontSize: 11, color: 'var(--text3)' }}>Press Esc to close</span>
         </div>
