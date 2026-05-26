@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 
 const NAV = [
   { to: '/dashboard', icon: '▦', label: 'Dashboard' },
+  { to: '/change-password', icon: '#', label: 'Change password' },
   { to: '/epapers',   icon: '◫', label: 'ePapers' },
 ]
 
@@ -94,3 +95,4 @@ export function AppShell({ children }) {
     </div>
   )
 }
+

@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { AppShell } from './components/layout/AppShell'
 import LoginPage    from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import EpapersPage  from './pages/EpapersPage'
 import MapPage      from './pages/MapPage'
 import './index.css'
@@ -30,6 +31,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/epapers" element={
           <ProtectedRoute>
             <AppShell><EpapersPage /></AppShell>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/change-password" element={
+          <ProtectedRoute>
+            <AppShell><ChangePasswordPage /></AppShell>
           </ProtectedRoute>
         } />
 

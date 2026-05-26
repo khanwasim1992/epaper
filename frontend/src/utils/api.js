@@ -31,6 +31,10 @@ export const authApi = {
       .then(r => r.data)
   },
   me: () => http.get('/auth/me').then(r => r.data),
+  changePassword: (newPassword, confirmPassword) => http.post('/auth/change-password', {
+    new_password: newPassword,
+    confirm_password: confirmPassword,
+  }).then(r => r.data),
 }
 
 export const epaperApi = {

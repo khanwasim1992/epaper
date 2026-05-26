@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from datetime import timedelta
 
 from core.database import get_db
-from core.security import verify_password, create_access_token, get_current_user
+from core.security import verify_password, hash_password, create_access_token, get_current_user
 from core.config import settings
 from models.models import Admin
 
@@ -18,6 +18,11 @@ class TokenResponse(BaseModel):
     token_type: str
     username: str
     role: str
+
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    confirm_password: str
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -53,3 +58,30 @@ async def login(
 @router.get("/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    new_password = payload.new_password
+    confirm_password = payload.confirm_password
+
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="New password and confirm password do not match")
+
+    result = await db.execute(select(Admin).where(Admin.username == current_user["username"]))
+    admin = result.scalar_one_or_none()
+
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+
+    admin.hashed_password = hash_password(new_password)
+    await db.commit()
+
+    return {"message": "Password changed successfully"}
