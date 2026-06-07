@@ -14,7 +14,7 @@ app = FastAPI(title="ePaper Admin API", version="1.0.0", docs_url="/api/docs")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=["https://wachaklokshahicha.com","https://www.wachaklokshahicha.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
