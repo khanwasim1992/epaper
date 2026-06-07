@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const http = axios.create({ baseURL: 'http://127.0.0.1:8000/api' })
+const http = axios.create({ baseURL: '/api' })
 
 // Attach token
 http.interceptors.request.use((config) => {
@@ -49,11 +49,11 @@ export const epaperApi = {
   pages:       (id)            => http.get(`/epapers/${id}/pages`).then(r => r.data),
   pageImageUrl:(id, pageNum)   => {
     const token = localStorage.getItem('token')
-    return `http://127.0.0.1:8000/api/epapers/${id}/pages/${pageNum}/image${token ? '?token=' + token : ''}`
+    return `/api/epapers/${id}/pages/${pageNum}/image${token ? '?token=' + token : ''}`
   },
   cropUrl:(id, pn, x, y, w, h) => {
     const token = localStorage.getItem('token')
-    return `http://127.0.0.1:8000/api/epapers/${id}/crop/${pn}?x=${x}&y=${y}&w=${w}&h=${h}${token ? '&token=' + token : ''}`
+    return `/api/epapers/${id}/crop/${pn}?x=${x}&y=${y}&w=${w}&h=${h}${token ? '&token=' + token : ''}`
   },
 
   getMappings: (id, pn)        => http.get(`/epapers/${id}/pages/${pn}/mappings`).then(r => r.data),
