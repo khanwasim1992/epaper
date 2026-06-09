@@ -82,12 +82,14 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const dragStart = useRef(null)
   const imgRef = useRef(null)
   const cropFileRef = useRef(null)
+  const touchStartRef = useRef(null)
 
   useEffect(() => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
     setCopied(false)
     cropFileRef.current = null
+    touchStartRef.current = null
   }, [region])
 
   useEffect(() => {
@@ -103,15 +105,17 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const shareTitle = region.label || epaper.title || 'ePaper news'
   const shareText = region.notes ? `${shareTitle} - ${region.notes}` : shareTitle
   const encodedUrl = encodeURIComponent(cropUrl)
+  const shareBody = `${shareText}\n${cropUrl}`
   const encodedText = encodeURIComponent(shareText)
+  const encodedShareBody = encodeURIComponent(shareBody)
   const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
   const shareLinks = [
     { name: 'Facebook', icon: ACTION_ICONS.facebook, fallbackHref: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
     { name: 'X', icon: ACTION_ICONS.x, fallbackHref: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}` },
-    { name: 'WhatsApp', icon: ACTION_ICONS.whatsapp, fallbackHref: `https://wa.me/?text=${encodedText}%20${encodedUrl}` },
+    { name: 'WhatsApp', icon: ACTION_ICONS.whatsapp, fallbackHref: `https://wa.me/?text=${encodedShareBody}` },
     { name: 'Telegram', icon: ACTION_ICONS.telegram, fallbackHref: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
     { name: 'LinkedIn', icon: ACTION_ICONS.linkedin, fallbackHref: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
-    { name: 'Email', icon: ACTION_ICONS.email, fallbackHref: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}` },
+    { name: 'Email', icon: ACTION_ICONS.email, fallbackHref: `mailto:?subject=${encodedText}&body=${encodedShareBody}` },
   ]
 
   const zoomIn  = () => setZoom(z => Math.min(z + 0.25, 4))
@@ -138,6 +142,57 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     })
   }
   const onMouseUp = () => { setDragging(false); dragStart.current = null }
+  const getTouchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.hypot(dx, dy)
+  }
+  const onTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        mode: 'pan',
+        mx: e.touches[0].clientX,
+        my: e.touches[0].clientY,
+        px: pan.x,
+        py: pan.y,
+      }
+      setDragging(zoom > 1)
+      return
+    }
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      touchStartRef.current = {
+        mode: 'pinch',
+        distance: getTouchDistance(e.touches),
+        zoom,
+        pan,
+      }
+      setDragging(false)
+    }
+  }
+  const onTouchMove = (e) => {
+    const start = touchStartRef.current
+    if (!start) return
+    if (start.mode === 'pan' && e.touches.length === 1) {
+      if (zoom <= 1) return
+      e.preventDefault()
+      setPan({
+        x: start.px + (e.touches[0].clientX - start.mx),
+        y: start.py + (e.touches[0].clientY - start.my),
+      })
+      return
+    }
+    if (start.mode === 'pinch' && e.touches.length === 2) {
+      e.preventDefault()
+      const nextZoom = Math.max(0.5, Math.min(4, start.zoom * (getTouchDistance(e.touches) / start.distance)))
+      setZoom(nextZoom)
+      if (nextZoom <= 1) setPan({ x: 0, y: 0 })
+    }
+  }
+  const onTouchEnd = () => {
+    setDragging(false)
+    touchStartRef.current = null
+  }
   const copyShareLink = async () => {
     try {
       await navigator.clipboard.writeText(cropUrl)
@@ -167,7 +222,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareText, files: [file] })
+        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl, files: [file] })
         return
       }
     } catch (error) {
@@ -179,11 +234,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareText, files: [file] })
+        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl, files: [file] })
         return
       }
       if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareText, url: cropUrl })
+        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl })
         return
       }
     } catch (error) {
@@ -373,6 +428,10 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
           style={{
             flex: 1,
             overflow: 'hidden',
@@ -383,6 +442,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
             cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'default',
             minHeight: 200,
             position: 'relative',
+            touchAction: zoom > 1 ? 'none' : 'pan-y',
           }}
         >
           <img
@@ -420,6 +480,8 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     </div>
   )
 }
+
+
 
 
 
