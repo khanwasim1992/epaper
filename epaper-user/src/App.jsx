@@ -81,7 +81,7 @@ export default function App() {
         padding: '10px 20px', textAlign: 'center',
         fontSize: 11, color: 'var(--text3)',
       }}>
-        © {new Date().getFullYear()} ePaper · All rights reserved
+        © {new Date().getFullYear()} Wachak Lokshahicha · All rights reserved
       </footer>
     </div>
   )

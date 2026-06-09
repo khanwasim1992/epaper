@@ -147,7 +147,7 @@ export function Header({
         letterSpacing: '0.15em', color: 'var(--text)',
         textTransform: 'uppercase',
       }}>
-        ◆ Daily ePaper Edition ◆
+        ◆ Daily Wachak Lokshahicha Edition ◆
       </div>
 
       {/* Main header bar */}
@@ -166,20 +166,7 @@ export function Header({
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 10,
-              background: 'var(--accent)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22, fontWeight: 800, color: '#000', flexShrink: 0,
-            }}>E</div>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>
-                ePaper
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', letterSpacing: '0.03em' }}>
-                {epaper ? epaper.title : 'Daily Digital Edition'}
-              </div>
-            </div>
+            <img style={{ height: '70px'}}src={logo} alt='Wachak Logo' />
           </div>
 
           {/* Date controls */}
@@ -266,7 +253,11 @@ export function Header({
         </div>
         <div style={{
           textAlign: 'center'
-        }}><img style={{ height: '100px'}}src={logo} alt='Wachak Logo' /></div>
+        }}>
+           <div style={{ fontSize: 16, color: 'var(--text2)', letterSpacing: '0.03em' }}>
+                {epaper ? epaper.title : 'Daily Digital Edition'}
+              </div>
+        </div>
       </div>
     </header>
   )

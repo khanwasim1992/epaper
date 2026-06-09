@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { publicApi } from '../utils/api'
 
 const COLORS = ['#4f8ef7','#34d399','#f97316','#e879f9','#fbbf24','#60a5fa','#a78bfa','#fb7185']
@@ -81,11 +81,13 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const [copied, setCopied] = useState(false)
   const dragStart = useRef(null)
   const imgRef = useRef(null)
+  const cropFileRef = useRef(null)
 
   useEffect(() => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
     setCopied(false)
+    cropFileRef.current = null
   }, [region])
 
   useEffect(() => {
@@ -104,22 +106,22 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const encodedText = encodeURIComponent(shareText)
   const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
   const shareLinks = [
-    { name: 'Facebook', icon: ACTION_ICONS.facebook, href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-    { name: 'X', icon: ACTION_ICONS.x, href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}` },
-    { name: 'WhatsApp', icon: ACTION_ICONS.whatsapp, href: `https://wa.me/?text=${encodedText}%20${encodedUrl}` },
-    { name: 'Telegram', icon: ACTION_ICONS.telegram, href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
-    { name: 'LinkedIn', icon: ACTION_ICONS.linkedin, href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
-    { name: 'Email', icon: ACTION_ICONS.email, href: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}` },
+    { name: 'Facebook', icon: ACTION_ICONS.facebook, fallbackHref: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+    { name: 'X', icon: ACTION_ICONS.x, fallbackHref: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}` },
+    { name: 'WhatsApp', icon: ACTION_ICONS.whatsapp, fallbackHref: `https://wa.me/?text=${encodedText}%20${encodedUrl}` },
+    { name: 'Telegram', icon: ACTION_ICONS.telegram, fallbackHref: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}` },
+    { name: 'LinkedIn', icon: ACTION_ICONS.linkedin, fallbackHref: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
+    { name: 'Email', icon: ACTION_ICONS.email, fallbackHref: `mailto:?subject=${encodedText}&body=${encodedText}%0A%0A${encodedUrl}` },
   ]
 
   const zoomIn  = () => setZoom(z => Math.min(z + 0.25, 4))
-  const zoomOut = () => { setZoom(z => { const nz = Math.max(z - 0.25, 0.5); if (nz === 1) setPan({ x: 0, y: 0 }); return nz }) }
+  const zoomOut = () => { setZoom(z => { const nz = Math.max(z - 0.25, 0.5); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz }) }
   const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
 
   const onWheel = useCallback((e) => {
     e.preventDefault()
     const delta = e.deltaY < 0 ? 0.15 : -0.15
-    setZoom(z => Math.max(0.5, Math.min(4, z + delta)))
+    setZoom(z => { const nz = Math.max(0.5, Math.min(4, z + delta)); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz })
   }, [])
 
   const onMouseDown = (e) => {
@@ -145,13 +147,49 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
       window.prompt('Copy news link', cropUrl)
     }
   }
-  const nativeShare = async () => {
-    if (!navigator.share) return copyShareLink()
-    try {
-      await navigator.share({ title: shareTitle, text: shareText, url: cropUrl })
-    } catch {
-      // User cancelled the native share sheet.
+  const getCropFile = async () => {
+    if (cropFileRef.current) return cropFileRef.current
+    const response = await fetch(cropUrl)
+    if (!response.ok) throw new Error('Could not load clipping image')
+    const blob = await response.blob()
+    const file = new File([blob], downloadName, { type: blob.type || 'image/jpeg' })
+    cropFileRef.current = file
+    return file
+  }
+  const openFallbackShare = (href) => {
+    if (href.startsWith('mailto:')) {
+      window.location.href = href
+      return
     }
+    window.open(href, '_blank', 'noopener,noreferrer')
+  }
+  const shareImage = async (item) => {
+    try {
+      const file = await getCropFile()
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: shareTitle, text: shareText, files: [file] })
+        return
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+    }
+    openFallbackShare(item.fallbackHref)
+  }
+  const nativeShare = async () => {
+    try {
+      const file = await getCropFile()
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: shareTitle, text: shareText, files: [file] })
+        return
+      }
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, text: shareText, url: cropUrl })
+        return
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+    }
+    copyShareLink()
   }
   const printClip = () => {
     const win = window.open('', '_blank', 'noopener,noreferrer')
@@ -223,12 +261,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
               {shareLinks.map(item => (
-                <a
+                <button
                   key={item.name}
-                  href={item.href}
-                  target={item.name === 'Email' ? undefined : '_blank'}
-                  rel={item.name === 'Email' ? undefined : 'noopener noreferrer'}
-                  title={`Share on ${item.name}`}
+                  type="button"
+                  onClick={() => shareImage(item)}
+                  title={`Share image on ${item.name}`}
                   style={actionButtonStyle}
                   onMouseEnter={e => {
                     e.currentTarget.style.color = 'var(--accent)'
@@ -240,7 +277,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
                   }}
                 >
                   {item.icon}
-                </a>
+                </button>
               ))}
               <button
                 onClick={nativeShare}
@@ -353,14 +390,16 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
             alt={region.label}
             draggable={false}
             style={{
-              maxWidth: zoom === 1 ? '100%' : 'none',
-              maxHeight: zoom === 1 ? '60vh' : 'none',
-              width: zoom !== 1 ? `${zoom * 100}%` : undefined,
+              maxWidth: '100%',
+              maxHeight: '60vh',
+              width: 'auto',
+              height: 'auto',
               objectFit: 'contain',
-              transform: `translate(${pan.x}px, ${pan.y}px)`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center center',
               userSelect: 'none',
               display: 'block',
-              transition: dragging ? 'none' : 'transform 0.05s',
+              transition: dragging ? 'none' : 'transform 0.12s ease',
             }}
           />
         </div>
@@ -381,3 +420,6 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     </div>
   )
 }
+
+
+
