@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import logo from '../assets/wachak _logo.PNG'
 
 const SOCIAL = [
@@ -136,6 +136,17 @@ export function Header({
 
   return (
     <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+
+       <style>{`
+        .header-logo {
+          height: 70px;
+        }
+        @media (max-width: 640px) {
+          .header-logo { height: 45px; }
+        }
+      `}</style>
+
+
       {/* Social bar */}
       <SocialBar />
 
@@ -166,7 +177,7 @@ export function Header({
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img style={{ height: '70px'}}src={logo} alt='Wachak Logo' />
+            <img className="header-logo" src={logo} alt="Wachak Logo" />
           </div>
 
           {/* Date controls */}

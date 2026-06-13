@@ -1,11 +1,12 @@
 import uuid
 import shutil
+import io
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
@@ -422,15 +423,17 @@ async def crop_region(
         raise HTTPException(404, "Page not found")
 
     from PIL import Image
-    img = Image.open(pg.image_path)
-    x1, y1 = max(0, int(x)), max(0, int(y))
-    x2, y2 = min(img.width, int(x + w)), min(img.height, int(y + h))
-    if x2 <= x1 or y2 <= y1:
-        raise HTTPException(400, "Invalid crop area")
-    cropped   = img.crop((x1, y1, x2, y2))
-    crop_path = Path(settings.CROPS_DIR) / f"{uuid.uuid4()}.png"
-    cropped.save(str(crop_path))
-    return FileResponse(str(crop_path), media_type="image/png")
+    with Image.open(pg.image_path) as img:
+        x1, y1 = max(0, int(x)), max(0, int(y))
+        x2, y2 = min(img.width, int(x + w)), min(img.height, int(y + h))
+        if x2 <= x1 or y2 <= y1:
+            raise HTTPException(400, "Invalid crop area")
+        
+        cropped = img.crop((x1, y1, x2, y2))
+        img_byte_arr = io.BytesIO()
+        cropped.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        return StreamingResponse(img_byte_arr, media_type="image/png")
 
 
 # ─────────────────────────────────────────────

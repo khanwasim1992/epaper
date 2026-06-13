@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { publicApi } from '../utils/api'
+import { absoluteUrl, clippingPagePath, publicApi } from '../utils/api'
 
 const COLORS = ['#4f8ef7','#34d399','#f97316','#e879f9','#fbbf24','#60a5fa','#a78bfa','#fb7185']
 const getColor = (idx) => COLORS[idx % COLORS.length]
@@ -104,8 +104,19 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const color = getColor(region.color_idx ?? 0)
   const shareTitle = region.label || epaper.title || 'ePaper news'
   const shareText = region.notes ? `${shareTitle} - ${region.notes}` : shareTitle
-  const encodedUrl = encodeURIComponent(cropUrl)
-  const shareBody = `${shareText}\n${cropUrl}`
+  const clipPagePath = clippingPagePath({
+    epaperId: epaper.id,
+    pageNum,
+    title: shareTitle,
+    x: region.x,
+    y: region.y,
+    w: region.w,
+    h: region.h,
+  })
+  const sharePageUrl = absoluteUrl(clipPagePath)
+  const directImageUrl = absoluteUrl(cropUrl)
+  const encodedUrl = encodeURIComponent(sharePageUrl)
+  const shareBody = `${shareText}\n${sharePageUrl}\nImage: ${directImageUrl}`
   const encodedText = encodeURIComponent(shareText)
   const encodedShareBody = encodeURIComponent(shareBody)
   const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
@@ -195,11 +206,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   }
   const copyShareLink = async () => {
     try {
-      await navigator.clipboard.writeText(cropUrl)
+      await navigator.clipboard.writeText(sharePageUrl)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1600)
     } catch {
-      window.prompt('Copy news link', cropUrl)
+      window.prompt('Copy news link', sharePageUrl)
     }
   }
   const getCropFile = async () => {
@@ -222,7 +233,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl, files: [file] })
+        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl, files: [file] })
         return
       }
     } catch (error) {
@@ -234,11 +245,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl, files: [file] })
+        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl, files: [file] })
         return
       }
       if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: cropUrl })
+        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl })
         return
       }
     } catch (error) {
@@ -480,8 +491,3 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     </div>
   )
 }
-
-
-
-
-
