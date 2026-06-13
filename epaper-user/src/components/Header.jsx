@@ -120,6 +120,7 @@ export function Header({
   date, onDateChange,
   epaper,
   onPrevDate, onNextDate, hasPrev, hasNext,
+  showControls = true,
 }) {
   const fmt = (d) => {
     if (!d) return ''
@@ -181,7 +182,8 @@ export function Header({
           </div>
 
           {/* Date controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {showControls && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
 
             {/* Edition label */}
             <span style={{ fontSize: 11, color: 'var(--text2)', marginRight: 4 }}>
@@ -260,7 +262,8 @@ export function Header({
                 PDF
               </button>
             )}
-          </div>
+            </div>
+          )}
         </div>
         <div style={{
           textAlign: 'center'

@@ -1,7 +1,9 @@
 import React from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Header } from './components/Header'
 import { EpaperSlider } from './components/EpaperSlider'
 import { useEpaper } from './hooks/useEpaper'
+import ClipPage from './components/ClipPage'
 
 function Spinner() {
   return (
@@ -51,12 +53,11 @@ function ErrorState({ message }) {
   )
 }
 
-export default function App() {
+function MainEpaperView() {
   const {
     date, changeDate, epaper, loading, notFound, error,
-    availableDates, goToPrevDate, goToNextDate, hasPrev, hasNext,
+    goToPrevDate, goToNextDate, hasPrev, hasNext,
   } = useEpaper()
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header
@@ -84,5 +85,16 @@ export default function App() {
         © {new Date().getFullYear()} Wachak Lokshahicha · All rights reserved
       </footer>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainEpaperView />} />
+        <Route path="/news/:epaperId/:pageNum/:slug" element={<ClipPage />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
