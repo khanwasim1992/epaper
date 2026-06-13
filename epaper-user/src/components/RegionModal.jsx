@@ -1,5 +1,16 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { absoluteUrl, clippingPagePath, publicApi } from '../utils/api'
+import { publicApi } from '../utils/api'
+
+// Helper to construct an absolute URL from a relative path
+const absoluteUrl = (path) => {
+  return `${window.location.origin}${path}`
+}
+
+// Helper to generate the URL path for the dedicated news clipping page
+const clippingPagePath = ({ epaperId, pageNum, title, x, y, w, h }) => {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'
+  return `/news/${epaperId}/${pageNum}/${slug}?x=${x}&y=${y}&w=${w}&h=${h}&title=${encodeURIComponent(title)}`
+}
 
 const COLORS = ['#4f8ef7','#34d399','#f97316','#e879f9','#fbbf24','#60a5fa','#a78bfa','#fb7185']
 const getColor = (idx) => COLORS[idx % COLORS.length]
