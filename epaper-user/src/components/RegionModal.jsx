@@ -127,7 +127,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const sharePageUrl = absoluteUrl(clipPagePath)
   const directImageUrl = absoluteUrl(cropUrl)
   const encodedUrl = encodeURIComponent(sharePageUrl)
-  const shareBody = `${shareText}\n${sharePageUrl}\nImage: ${directImageUrl}`
+  const shareBody = `${shareText}\n${sharePageUrl}`
   const encodedText = encodeURIComponent(shareText)
   const encodedShareBody = encodeURIComponent(shareBody)
   const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
