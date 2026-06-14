@@ -92,12 +92,14 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const [copied, setCopied] = useState(false)
   const dragStart = useRef(null)
   const imgRef = useRef(null)
+  const zoomRef = useRef(zoom)
   const cropFileRef = useRef(null)
   const touchStartRef = useRef(null)
 
   useEffect(() => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
+    zoomRef.current = 1
     setCopied(false)
     cropFileRef.current = null
     touchStartRef.current = null
@@ -108,6 +110,10 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  useEffect(() => {
+    zoomRef.current = zoom
+  }, [zoom])
 
   if (!region || !epaper) return null
 
@@ -143,12 +149,6 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const zoomIn  = () => setZoom(z => Math.min(z + 0.25, 4))
   const zoomOut = () => { setZoom(z => { const nz = Math.max(z - 0.25, 0.5); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz }) }
   const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
-
-  const onWheel = useCallback((e) => {
-    e.preventDefault()
-    const delta = e.deltaY < 0 ? 0.15 : -0.15
-    setZoom(z => { const nz = Math.max(0.5, Math.min(4, z + delta)); if (nz <= 1) setPan({ x: 0, y: 0 }); return nz })
-  }, [])
 
   const onMouseDown = (e) => {
     if (zoom <= 1) return
@@ -192,25 +192,54 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
       setDragging(false)
     }
   }
-  const onTouchMove = (e) => {
-    const start = touchStartRef.current
-    if (!start) return
-    if (start.mode === 'pan' && e.touches.length === 1) {
-      if (zoom <= 1) return
+
+  useEffect(() => {
+    const el = imgRef.current
+    if (!el) return
+
+    const handleWheel = (e) => {
       e.preventDefault()
-      setPan({
-        x: start.px + (e.touches[0].clientX - start.mx),
-        y: start.py + (e.touches[0].clientY - start.my),
+      const delta = e.deltaY < 0 ? 0.15 : -0.15
+      setZoom(z => {
+        const nz = Math.max(0.5, Math.min(4, z + delta))
+        if (nz <= 1) setPan({ x: 0, y: 0 })
+        return nz
       })
-      return
     }
-    if (start.mode === 'pinch' && e.touches.length === 2) {
-      e.preventDefault()
-      const nextZoom = Math.max(0.5, Math.min(4, start.zoom * (getTouchDistance(e.touches) / start.distance)))
-      setZoom(nextZoom)
-      if (nextZoom <= 1) setPan({ x: 0, y: 0 })
+
+    const handleTouchMove = (e) => {
+      const start = touchStartRef.current
+      if (!start) return
+
+      const currentZoom = zoomRef.current
+
+      if (start.mode === 'pan' && e.touches.length === 1) {
+        if (currentZoom <= 1) return
+        e.preventDefault()
+        setPan({
+          x: start.px + (e.touches[0].clientX - start.mx),
+          y: start.py + (e.touches[0].clientY - start.my),
+        })
+      } else if (start.mode === 'pinch' && e.touches.length === 2) {
+        e.preventDefault()
+        const distance = getTouchDistance(e.touches)
+        setZoom(z => {
+          const nextZoom = Math.max(0.5, Math.min(4, start.zoom * (distance / start.distance)))
+          if (nextZoom <= 1) setPan({ x: 0, y: 0 })
+          return nextZoom
+        })
+      }
     }
-  }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false })
+
+    return () => {
+      el.removeEventListener('wheel', handleWheel)
+      el.removeEventListener('touchmove', handleTouchMove)
+    }
+  }, [])
+
   const onTouchEnd = () => {
     setDragging(false)
     touchStartRef.current = null
@@ -445,13 +474,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
 
         <div
           ref={imgRef}
-          onWheel={onWheel}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
           onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onTouchCancel={onTouchEnd}
           style={{

@@ -11,6 +11,7 @@ const hexAlpha = (hex, a) => {
 export function PageViewer({ page, epaperId, onRegionClick }) {
   const imgRef       = useRef(null)
   const canvasRef    = useRef(null)
+  const containerRef = useRef(null)
   const [imgLoaded, setImgLoaded]         = useState(false)
   const [naturalSize, setNaturalSize]     = useState({ w: 1, h: 1 })
   const [hoveredId, setHoveredId]         = useState(null)
@@ -122,10 +123,21 @@ export function PageViewer({ page, epaperId, onRegionClick }) {
     if (hit) onRegionClick(hit)
   }
 
-  const onWheel = useCallback((e) => {
-    e.preventDefault()
-    const delta = e.deltaY < 0 ? 0.12 : -0.12
-    setZoom(z => { const nz = Math.max(1, Math.min(5, z + delta)); if (nz === 1) setPan({ x: 0, y: 0 }); return nz })
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handleWheel = (e) => {
+      e.preventDefault()
+      const delta = e.deltaY < 0 ? 0.12 : -0.12
+      setZoom(z => {
+        const nz = Math.max(1, Math.min(5, z + delta))
+        if (nz === 1) setPan({ x: 0, y: 0 })
+        return nz
+      })
+    }
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
   }, [])
 
   if (!page) return null
@@ -134,7 +146,7 @@ export function PageViewer({ page, epaperId, onRegionClick }) {
   return (
     <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', lineHeight: 0, boxShadow: '0 8px 48px rgba(0,0,0,0.7)', borderRadius: 4, overflow: 'hidden', background: '#111' }}>
       <div
-        onWheel={onWheel} onMouseDown={onMouseDown} onMouseUp={onMouseUp}
+        ref={containerRef} onMouseDown={onMouseDown} onMouseUp={onMouseUp}
         onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}
         style={{ overflow: 'hidden', cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : (hoveredId ? 'pointer' : 'default'), userSelect: 'none', lineHeight: 0 }}
       >
