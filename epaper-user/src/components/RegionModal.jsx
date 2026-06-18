@@ -285,11 +285,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl, files: [file] })
+        await navigator.share({ title: shareTitle, text: shareBody, files: [file] })
         return
       }
       if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl })
+        await navigator.share({ title: shareTitle, text: shareBody })
         return
       }
     } catch (error) {
