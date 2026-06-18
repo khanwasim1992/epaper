@@ -134,6 +134,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const directImageUrl = absoluteUrl(cropUrl)
   const encodedUrl = encodeURIComponent(sharePageUrl)
   const shareBody = `${shareText}\n${sharePageUrl}`
+  const nativeSharePayload = { title: shareTitle, text: shareText, url: sharePageUrl }
   const encodedText = encodeURIComponent(shareText)
   const encodedShareBody = encodeURIComponent(shareBody)
   const downloadName = `${shareTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'}-clip.jpg`
@@ -273,7 +274,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareBody, url: sharePageUrl, files: [file] })
+        await navigator.share({ ...nativeSharePayload, files: [file] })
         return
       }
     } catch (error) {
@@ -285,11 +286,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     try {
       const file = await getCropFile()
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: shareTitle, text: shareBody, files: [file] })
+        await navigator.share({ ...nativeSharePayload, files: [file] })
         return
       }
       if (navigator.share) {
-        await navigator.share({ title: shareTitle, text: shareBody })
+        await navigator.share(nativeSharePayload)
         return
       }
     } catch (error) {
