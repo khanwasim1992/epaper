@@ -45,9 +45,9 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div className="page-header">
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Dashboard</h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Overview of your ePaper publications</p>
@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <span className="spinner" /> Loading stats…
         </div>
       ) : stats ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
+        <div className="stats-grid">
           <StatCard label="Total ePapers"      value={stats.total}              color="#1a56db" sub="All time"             onClick={() => navigate('/epapers')} />
           <StatCard label="Published"          value={stats.published}          color="#057a55" sub="Live & visible"       onClick={() => navigate('/epapers?filter=published')} />
           <StatCard label="Unpublished"        value={stats.unpublished}        color="#92400e" sub="Not yet live"         onClick={() => navigate('/epapers?filter=unpublished')} />

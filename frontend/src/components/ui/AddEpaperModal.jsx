@@ -43,15 +43,8 @@ export function AddEpaperModal({ open, onClose, onCreated }) {
   if (!open) return null
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }} onClick={handleClose}>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)',
-        width: '100%', maxWidth: 480, padding: 28,
-      }} onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop" style={{ zIndex: 500 }} onClick={handleClose}>
+      <div className="modal-card modal-card-padded" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <h2 style={{ fontSize: 16, fontWeight: 600 }}>Add new ePaper</h2>
           <button className="btn btn-icon" onClick={handleClose}>✕</button>

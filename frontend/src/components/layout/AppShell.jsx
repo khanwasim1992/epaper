@@ -18,16 +18,11 @@ export function AppShell({ children }) {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="app-shell">
       {/* Sidebar */}
-      <aside style={{
-        width: 220, flexShrink: 0,
-        background: 'var(--surface)', borderRight: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100,
-      }}>
+      <aside className="app-sidebar">
         {/* Logo */}
-        <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)' }}>
+        <div className="app-brand">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 8,
@@ -43,7 +38,7 @@ export function AppShell({ children }) {
         </div>
 
         {/* Nav */}
-        <nav style={{ padding: '10px 10px', flex: 1 }}>
+        <nav className="app-nav">
           {NAV.map(n => (
             <NavLink
               key={n.to}
@@ -65,7 +60,7 @@ export function AppShell({ children }) {
         </nav>
 
         {/* User */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+        <div className="app-user">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{
               width: 28, height: 28, borderRadius: '50%',
@@ -89,7 +84,7 @@ export function AppShell({ children }) {
       </aside>
 
       {/* Main content */}
-      <main style={{ marginLeft: 220, flex: 1, minHeight: '100vh', background: 'var(--bg)' }}>
+      <main className="app-main">
         {children}
       </main>
     </div>

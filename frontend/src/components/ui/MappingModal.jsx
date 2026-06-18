@@ -60,15 +60,8 @@ export function MappingModal({ mapping, epaperId, pageNum, onClose, onSaved, onD
   const col = getColor(mapping.color_idx ?? 0)
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }} onClick={onClose}>
-      <div style={{
-        background: 'var(--surface)', borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border)', boxShadow: 'var(--shadow-md)',
-        width: '100%', maxWidth: 460, overflow: 'hidden',
-      }} onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop" style={{ zIndex: 600 }} onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth: 460, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
 
         {/* Header strip */}
         <div style={{ height: 4, background: col }} />

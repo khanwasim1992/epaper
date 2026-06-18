@@ -96,16 +96,11 @@ export default function MapPage() {
   const page = pages.find(p => p.page_num === currentPage)
 
   return (
-    <div style={{ display: 'flex', height: '100vh', flexDirection: 'column' }}>
+    <div className="map-page">
       <ToastContainer toasts={toasts} />
 
       {/* Top bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '0 20px', height: 52,
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        flexShrink: 0, flexWrap: 'wrap',
-      }}>
+      <div className="map-toolbar">
         <button className="btn btn-sm" onClick={() => navigate('/epapers')}>← Back</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -148,10 +143,10 @@ export default function MapPage() {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div className="map-body">
 
         {/* Canvas area */}
-        <div style={{ flex: 1, overflow: 'auto', background: '#2a2a28', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24 }}>
+        <div className="map-canvas-area">
           {!imgLoaded && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#888', paddingTop: 60 }}>
               <span className="spinner" style={{ borderColor: '#555', borderTopColor: '#aaa' }} />
@@ -170,11 +165,7 @@ export default function MapPage() {
         </div>
 
         {/* Sidebar */}
-        <div style={{
-          width: 250, flexShrink: 0, background: 'var(--surface)',
-          borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}>
+        <div className="map-side-panel">
           {/* Sidebar header */}
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)' }}>
@@ -220,7 +211,7 @@ export default function MapPage() {
       </div>
 
       {/* Status bar */}
-      <div style={{ height: 26, background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 16, fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
+      <div className="map-status">
         <span>{mode === 'draw' ? 'Drag to draw a mapping region' : 'Click a region to edit'}</span>
         <span>·</span>
         <span>{totalMappings} mapping{totalMappings !== 1 ? 's' : ''} on this page</span>

@@ -118,10 +118,10 @@ export default function EpapersPage() {
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       <ToastContainer toasts={toasts} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="page-header">
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>ePapers</h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>{epapers.length} total ePapers</p>
@@ -130,7 +130,7 @@ export default function EpapersPage() {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 4, width: 'fit-content' }}>
+      <div className="filter-tabs">
         {STATUS_FILTERS.map(f => (
           <button
             key={f.key}

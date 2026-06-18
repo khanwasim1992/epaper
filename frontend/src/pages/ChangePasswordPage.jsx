@@ -32,13 +32,13 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="page">
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Change password</h1>
         <p style={{ fontSize: 13, color: 'var(--text2)' }}>Set a new password for the admin account</p>
       </div>
 
-      <div className="card" style={{ padding: 24, maxWidth: 460 }}>
+      <div className="card form-card">
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'var(--text2)' }}>
