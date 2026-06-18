@@ -19,8 +19,11 @@ export default function MapPage() {
   const [modalData, setModalData] = useState(null)
   const [imgLoaded, setImgLoaded] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [zoom, setZoom] = useState(1)
+  const [canvasAreaWidth, setCanvasAreaWidth] = useState(0)
 
   const colorCountRef = useRef(0)
+  const canvasAreaRef = useRef(null)
 
   // Load epaper + pages once
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function MapPage() {
     })()
   }, [id, currentPage])
 
-  const { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner, cancelDrawing } = useMapCanvas({
+  const { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner, cancelDrawing, imageSize } = useMapCanvas({
     mappings,
     onDrawn: (rect) => {
       const colorIdx = colorCountRef.current
@@ -60,8 +63,26 @@ export default function MapPage() {
   useEffect(() => {
     if (!epaper || pages.length === 0) return
     setImgLoaded(false)
+    setZoom(1)
     loadImage(epaperApi.pageImageUrl(id, currentPage)).then(() => setImgLoaded(true))
   }, [epaper, pages, currentPage, id])
+
+  useEffect(() => {
+    const el = canvasAreaRef.current
+    if (!el) return
+
+    const updateWidth = () => setCanvasAreaWidth(el.clientWidth)
+    updateWidth()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidth)
+      return () => window.removeEventListener('resize', updateWidth)
+    }
+
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   const handleSaved = useCallback((saved, isNew) => {
     setMappings(prev => isNew ? [...prev, saved] : prev.map(m => m.id === saved.id ? saved : m))
@@ -94,6 +115,14 @@ export default function MapPage() {
   )
 
   const page = pages.find(p => p.page_num === currentPage)
+  const fitWidth = imageSize
+    ? Math.min(imageSize.width, Math.max(1, canvasAreaWidth - 48))
+    : 0
+  const displayWidth = fitWidth ? Math.round(fitWidth * zoom) : undefined
+  const zoomPct = Math.round(zoom * 100)
+  const zoomIn = () => setZoom(z => Math.min(4, Number((z + 0.25).toFixed(2))))
+  const zoomOut = () => setZoom(z => Math.max(0.5, Number((z - 0.25).toFixed(2))))
+  const resetZoom = () => setZoom(1)
 
   return (
     <div className="map-page">
@@ -131,6 +160,15 @@ export default function MapPage() {
           </div>
         )}
 
+        {/* Zoom controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button className="btn btn-sm" disabled={zoom <= 0.5} onClick={zoomOut} title="Zoom out">-</button>
+          <button className="btn btn-sm" onClick={resetZoom} title="Reset zoom" style={{ minWidth: 58, justifyContent: 'center' }}>
+            {zoomPct}%
+          </button>
+          <button className="btn btn-sm" disabled={zoom >= 4} onClick={zoomIn} title="Zoom in">+</button>
+        </div>
+
         {/* Publish */}
         <button
           className={`btn btn-sm ${epaper.is_published ? 'btn-danger' : 'btn-success'}`}
@@ -146,23 +184,35 @@ export default function MapPage() {
       <div className="map-body">
 
         {/* Canvas area */}
-        <div className="map-canvas-area">
+        <div className="map-canvas-area" ref={canvasAreaRef}>
           {!imgLoaded && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#888', paddingTop: 60 }}>
               <span className="spinner" style={{ borderColor: '#555', borderTopColor: '#aaa' }} />
               Loading page…
             </div>
           )}
-          <div style={{ position: 'relative', display: imgLoaded ? 'inline-block' : 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', maxWidth: '100%' }}>
-            <canvas ref={bgRef} style={{ display: 'block', maxWidth: '100%' }} />
+          <div
+            style={{
+              position: 'relative',
+              display: imgLoaded ? 'inline-block' : 'none',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              width: displayWidth,
+              maxWidth: 'none',
+              flexShrink: 0,
+              margin: '0 auto',
+            }}
+          >
+            <canvas ref={bgRef} style={{ display: 'block', width: '100%', maxWidth: 'none' }} />
             <canvas
               ref={drawRef}
               style={{
                 position: 'absolute',
                 inset: 0,
                 cursor: mode === 'draw' ? 'crosshair' : 'default',
-                maxWidth: '100%',
-                touchAction: mode === 'draw' ? 'none' : 'manipulation',
+                width: '100%',
+                height: '100%',
+                maxWidth: 'none',
+                touchAction: mode === 'draw' ? 'pan-x pan-y' : 'manipulation',
               }}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
               onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}

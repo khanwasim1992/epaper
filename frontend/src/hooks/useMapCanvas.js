@@ -16,6 +16,7 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   const start   = useRef({ x: 0, y: 0 })
   const pointer = useRef(null)
   const [pendingCorner, setPendingCorner] = useState(null)
+  const [imageSize, setImageSize] = useState(null)
 
   const loadImage = useCallback((url) => {
     return new Promise((resolve) => {
@@ -26,6 +27,7 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
         if (!bg || !dr) return
         bg.width = dr.width  = img.naturalWidth
         bg.height = dr.height = img.naturalHeight
+        setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
         bg.getContext('2d').drawImage(img, 0, 0)
         redraw()
         resolve()
@@ -102,13 +104,14 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   }
 
   const onDown  = useCallback((e) => {
-    e.preventDefault()
+    const isTouch = Boolean(e.touches)
+    if (!isTouch) e.preventDefault()
     const p = getPos(e)
     if (mode === 'draw') {
       drawing.current = true
       start.current = p
       pointer.current = {
-        isTouch: Boolean(e.touches),
+        isTouch,
         clientX: e.touches ? e.touches[0].clientX : e.clientX,
         clientY: e.touches ? e.touches[0].clientY : e.clientY,
         moved: false,
@@ -118,19 +121,21 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   }, [mode, mappings, onSelect])
 
   const onMove  = useCallback((e) => {
-    e.preventDefault()
     if (!drawing.current) return
     if (pointer.current?.isTouch && e.touches?.[0]) {
       const dx = e.touches[0].clientX - pointer.current.clientX
       const dy = e.touches[0].clientY - pointer.current.clientY
       if (Math.hypot(dx, dy) > 8) pointer.current.moved = true
+      return
     }
+    e.preventDefault()
     const p = getPos(e); const s = start.current
     redraw({ x: s.x, y: s.y, w: p.x - s.x, h: p.y - s.y })
   }, [redraw])
 
   const onUp    = useCallback((e) => {
-    e.preventDefault()
+    const isTouchEnd = Boolean(e.changedTouches)
+    if (!isTouchEnd) e.preventDefault()
     if (!drawing.current) return
     drawing.current = false
     const cv = drawRef.current; const r = cv.getBoundingClientRect()
@@ -141,7 +146,13 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
     const wasTouchTap = pointer.current?.isTouch && !pointer.current.moved
     pointer.current = null
 
+    if (isTouchEnd && !wasTouchTap) {
+      redraw()
+      return
+    }
+
     if (wasTouchTap) {
+      e.preventDefault()
       if (!pendingCorner) {
         setPendingCorner({ x, y })
         return
@@ -166,5 +177,5 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
     setPendingCorner(null)
   }, [])
 
-  return { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner: Boolean(pendingCorner), cancelDrawing }
+  return { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner: Boolean(pendingCorner), cancelDrawing, imageSize }
 }
