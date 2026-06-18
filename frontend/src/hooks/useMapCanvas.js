@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect, useState } from 'react'
 
 const COLORS = ['#1a56db','#057a55','#c05621','#6c2bd9','#c81e1e','#0694a2','#b45309','#e74694']
 export const getColor = (idx) => COLORS[idx % COLORS.length]
@@ -14,6 +14,8 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   const imgRef  = useRef(null)
   const drawing = useRef(false)
   const start   = useRef({ x: 0, y: 0 })
+  const pointer = useRef(null)
+  const [pendingCorner, setPendingCorner] = useState(null)
 
   const loadImage = useCallback((url) => {
     return new Promise((resolve) => {
@@ -61,9 +63,27 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
       ctx.beginPath(); ctx.rect(preview.x, preview.y, preview.w, preview.h)
       ctx.fill(); ctx.stroke(); ctx.setLineDash([])
     }
-  }, [mappings])
+
+    if (pendingCorner && !preview) {
+      ctx.fillStyle = '#fff'
+      ctx.strokeStyle = '#1a56db'
+      ctx.lineWidth = 2
+      ctx.setLineDash([])
+      ctx.beginPath()
+      ctx.arc(pendingCorner.x, pendingCorner.y, 8, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(pendingCorner.x - 14, pendingCorner.y)
+      ctx.lineTo(pendingCorner.x + 14, pendingCorner.y)
+      ctx.moveTo(pendingCorner.x, pendingCorner.y - 14)
+      ctx.lineTo(pendingCorner.x, pendingCorner.y + 14)
+      ctx.stroke()
+    }
+  }, [mappings, pendingCorner])
 
   useEffect(() => { redraw() }, [redraw])
+  useEffect(() => { setPendingCorner(null); drawing.current = false }, [mode])
 
   const getPos = (e) => {
     const cv = drawRef.current; const r = cv.getBoundingClientRect()
@@ -84,13 +104,27 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   const onDown  = useCallback((e) => {
     e.preventDefault()
     const p = getPos(e)
-    if (mode === 'draw') { drawing.current = true; start.current = p }
+    if (mode === 'draw') {
+      drawing.current = true
+      start.current = p
+      pointer.current = {
+        isTouch: Boolean(e.touches),
+        clientX: e.touches ? e.touches[0].clientX : e.clientX,
+        clientY: e.touches ? e.touches[0].clientY : e.clientY,
+        moved: false,
+      }
+    }
     else { const hit = findAt(p.x, p.y); if (hit) onSelect(hit) }
   }, [mode, mappings, onSelect])
 
   const onMove  = useCallback((e) => {
     e.preventDefault()
     if (!drawing.current) return
+    if (pointer.current?.isTouch && e.touches?.[0]) {
+      const dx = e.touches[0].clientX - pointer.current.clientX
+      const dy = e.touches[0].clientY - pointer.current.clientY
+      if (Math.hypot(dx, dy) > 8) pointer.current.moved = true
+    }
     const p = getPos(e); const s = start.current
     redraw({ x: s.x, y: s.y, w: p.x - s.x, h: p.y - s.y })
   }, [redraw])
@@ -104,10 +138,33 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
     const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
     const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY
     const x = (cx - r.left) * sx, y = (cy - r.top) * sy
+    const wasTouchTap = pointer.current?.isTouch && !pointer.current.moved
+    pointer.current = null
+
+    if (wasTouchTap) {
+      if (!pendingCorner) {
+        setPendingCorner({ x, y })
+        return
+      }
+
+      const w = x - pendingCorner.x; const h = y - pendingCorner.y
+      if (Math.abs(w) < 10 || Math.abs(h) < 10) { redraw(); return }
+      setPendingCorner(null)
+      onDrawn({ x: Math.min(pendingCorner.x, x), y: Math.min(pendingCorner.y, y), w: Math.abs(w), h: Math.abs(h) })
+      return
+    }
+
     const s = start.current; const w = x - s.x; const h = y - s.y
     if (Math.abs(w) < 10 || Math.abs(h) < 10) { redraw(); return }
+    setPendingCorner(null)
     onDrawn({ x: Math.min(s.x, x), y: Math.min(s.y, y), w: Math.abs(w), h: Math.abs(h) })
-  }, [onDrawn, redraw])
+  }, [onDrawn, pendingCorner, redraw])
 
-  return { bgRef, drawRef, loadImage, onDown, onMove, onUp }
+  const cancelDrawing = useCallback(() => {
+    drawing.current = false
+    pointer.current = null
+    setPendingCorner(null)
+  }, [])
+
+  return { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner: Boolean(pendingCorner), cancelDrawing }
 }

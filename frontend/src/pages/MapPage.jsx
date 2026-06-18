@@ -45,7 +45,7 @@ export default function MapPage() {
     })()
   }, [id, currentPage])
 
-  const { bgRef, drawRef, loadImage, onDown, onMove, onUp } = useMapCanvas({
+  const { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner, cancelDrawing } = useMapCanvas({
     mappings,
     onDrawn: (rect) => {
       const colorIdx = colorCountRef.current
@@ -157,11 +157,26 @@ export default function MapPage() {
             <canvas ref={bgRef} style={{ display: 'block', maxWidth: '100%' }} />
             <canvas
               ref={drawRef}
-              style={{ position: 'absolute', inset: 0, cursor: mode === 'draw' ? 'crosshair' : 'default', maxWidth: '100%' }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                cursor: mode === 'draw' ? 'crosshair' : 'default',
+                maxWidth: '100%',
+                touchAction: mode === 'draw' ? 'none' : 'manipulation',
+              }}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
               onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+              onTouchCancel={cancelDrawing}
             />
           </div>
+          {mode === 'draw' && (
+            <div className="map-mobile-drawbar">
+              <span>{hasPendingCorner ? 'Tap opposite corner to finish' : 'Tap two corners or drag to add region'}</span>
+              {hasPendingCorner && (
+                <button className="btn btn-sm" onClick={cancelDrawing}>Cancel</button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
