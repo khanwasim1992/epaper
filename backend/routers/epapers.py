@@ -104,6 +104,30 @@ async def _epaper_out(ep: Epaper, db: AsyncSession) -> EpaperOut:
     return d
 
 
+def _brand_crop_with_logo(cropped):
+    logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
+    if not logo_path.exists():
+        return cropped
+
+    from PIL import Image, ImageDraw
+
+    crop = cropped.convert("RGB")
+    header_height = max(76, min(150, int(crop.width * 0.18)))
+    padding = max(12, header_height // 6)
+
+    with Image.open(logo_path) as logo_img:
+        logo = logo_img.convert("RGBA")
+        logo.thumbnail((max(1, crop.width - padding * 2), max(1, header_height - padding * 2)), Image.Resampling.LANCZOS)
+
+        branded = Image.new("RGB", (crop.width, crop.height + header_height), "white")
+        logo_x = (crop.width - logo.width) // 2
+        logo_y = (header_height - logo.height) // 2
+        branded.paste(logo, (logo_x, logo_y), logo)
+        ImageDraw.Draw(branded).line((0, header_height - 1, crop.width, header_height - 1), fill=(225, 225, 225))
+        branded.paste(crop, (0, header_height))
+        return branded
+
+
 # ─────────────────────────────────────────────
 #  Dashboard
 # ─────────────────────────────────────────────
@@ -429,7 +453,7 @@ async def crop_region(
         if x2 <= x1 or y2 <= y1:
             raise HTTPException(400, "Invalid crop area")
         
-        cropped = img.crop((x1, y1, x2, y2))
+        cropped = _brand_crop_with_logo(img.crop((x1, y1, x2, y2)))
         img_byte_arr = io.BytesIO()
         cropped.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
