@@ -196,7 +196,7 @@ export default function MapPage() {
               position: 'relative',
               display: imgLoaded ? 'inline-block' : 'none',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              width: displayWidth,
+              width: '100%',
               maxWidth: 'none',
               flexShrink: 0,
               margin: '0 auto',
