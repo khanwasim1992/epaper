@@ -32,7 +32,7 @@ export default function LoginPage() {
             alignItems: 'center', justifyContent: 'center',
             color: '#fff', fontSize: 24, fontWeight: 700, marginBottom: 12,
           }}>E</div>
-          <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>ePaper Admin</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>WachakLokshahicha Admin</h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Sign in to your account</p>
         </div>
 
@@ -89,10 +89,6 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
-
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text3)', marginTop: 16 }}>
-          Default: admin / admin123
-        </p>
       </div>
     </div>
   )

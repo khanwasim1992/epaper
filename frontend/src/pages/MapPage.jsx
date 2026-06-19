@@ -53,7 +53,7 @@ export default function MapPage() {
     onDrawn: (rect) => {
       const colorIdx = colorCountRef.current
       colorCountRef.current++
-      setModalData({ ...rect, color_idx: colorIdx, label: `Region ${mappings.length + 1}`, link_url: '', notes: '' })
+      setModalData({ ...rect, color_idx: colorIdx, label: `Wachak Lokshahicha ${mappings.length + 1}`, link_url: '', notes: '' })
     },
     onSelect: (m) => setModalData(m),
     mode,

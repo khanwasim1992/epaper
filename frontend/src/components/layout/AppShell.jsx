@@ -31,7 +31,7 @@ export function AppShell({ children }) {
               color: '#fff', fontSize: 16, fontWeight: 700,
             }}>E</div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>ePaper</div>
+              <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>WachakLokshahicha</div>
               <div style={{ fontSize: 11, color: 'var(--text3)' }}>Admin Panel</div>
             </div>
           </div>
