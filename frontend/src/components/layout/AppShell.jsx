@@ -14,7 +14,7 @@ export function AppShell({ children }) {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/admin')
   }
 
   return (

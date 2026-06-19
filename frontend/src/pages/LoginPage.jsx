@@ -31,7 +31,7 @@ export default function LoginPage() {
             background: 'var(--accent)', display: 'inline-flex',
             alignItems: 'center', justifyContent: 'center',
             color: '#fff', fontSize: 24, fontWeight: 700, marginBottom: 12,
-          }}>E</div>
+          }}>W</div>
           <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>WachakLokshahicha Admin</h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>Sign in to your account</p>
         </div>

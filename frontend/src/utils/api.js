@@ -15,7 +15,7 @@ http.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      window.location.href = '/admin'
     }
     const msg = err.response?.data?.detail || err.message || 'Request failed'
     return Promise.reject(new Error(typeof msg === 'string' ? msg : JSON.stringify(msg)))
