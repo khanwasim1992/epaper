@@ -105,6 +105,14 @@ async def _epaper_out(ep: Epaper, db: AsyncSession) -> EpaperOut:
     return d
 
 
+def _format_indian_date(date_value: str) -> str:
+    try:
+        parsed = datetime.strptime(date_value, "%Y-%m-%d")
+        return parsed.strftime("%d %B %Y")
+    except Exception:
+        return date_value
+
+
 def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date: Optional[str] = None):
     logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
     if not logo_path.exists():
@@ -119,9 +127,9 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
     website_url = "epaper.wachaklokshahicha.com"
     meta_text = ""
     if edition_date and page_num is not None:
-        meta_text = f"{edition_date} · Page {page_num}"
+        meta_text = f"{_format_indian_date(edition_date)} · Page {page_num}"
     elif edition_date:
-        meta_text = edition_date
+        meta_text = _format_indian_date(edition_date)
     elif page_num is not None:
         meta_text = f"Page {page_num}"
 
@@ -131,11 +139,6 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
 
     base_font_size = max(14, int(crop.width * 0.02))
     try:
-        # "arial.ttf" is a Windows font and is almost never present on a
-        # Linux server, so this used to silently fall back every time in
-        # production. Pillow ships its own scalable font (no system fonts
-        # required) via load_default(size=...) since Pillow 10.1 - use that
-        # directly so the header text renders at the intended size everywhere.
         font = ImageFont.load_default(size=base_font_size)
     except Exception:
         font = ImageFont.load_default()
@@ -158,11 +161,10 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
         for line in text_lines:
             if not line:
                 continue
-            # draw.textsize() was removed in Pillow 10.0; textbbox is the
-            # supported replacement for measuring rendered text size.
             bbox = draw.textbbox((0, 0), line, font=font)
+            width = bbox[2] - bbox[0]
             height = bbox[3] - bbox[1]
-            text_x = padding
+            text_x = max(padding, (crop.width - width) // 2)
             draw.text((text_x, text_y), line, fill=(35, 35, 35), font=font)
             text_y += height + 4
 
