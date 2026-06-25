@@ -93,8 +93,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainEpaperView />} />
-        <Route path="/news/:epaperId/:pageNum/:slug/:crop" element={<ClipPage />} />
-        <Route path="/news/:epaperId/:pageNum/:slug" element={<ClipPage />} />
+        <Route path="/news/:epaperId/:pageNum/:slug/:crop?" element={<ClipPage />} />
       </Routes>
     </BrowserRouter>
   )
