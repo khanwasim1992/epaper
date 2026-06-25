@@ -106,6 +106,7 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
   const onDown  = useCallback((e) => {
     const isTouch = Boolean(e.touches)
     if (!isTouch) e.preventDefault()
+    if (isTouch && e.touches.length > 1) return
     const p = getPos(e)
     if (mode === 'draw') {
       drawing.current = true
@@ -116,17 +117,19 @@ export function useMapCanvas({ mappings, onDrawn, onSelect, mode }) {
         clientY: e.touches ? e.touches[0].clientY : e.clientY,
         moved: false,
       }
+      if (!isTouch) redraw({ x: p.x, y: p.y, w: 0, h: 0 })
     }
     else { const hit = findAt(p.x, p.y); if (hit) onSelect(hit) }
-  }, [mode, mappings, onSelect])
+  }, [mode, mappings, onSelect, redraw])
 
   const onMove  = useCallback((e) => {
     if (!drawing.current) return
-    if (pointer.current?.isTouch && e.touches?.[0]) {
+    if (pointer.current?.isTouch) {
+      if (e.touches?.length !== 1) return
+      e.preventDefault()
       const dx = e.touches[0].clientX - pointer.current.clientX
       const dy = e.touches[0].clientY - pointer.current.clientY
       if (Math.hypot(dx, dy) > 8) pointer.current.moved = true
-      return
     }
     e.preventDefault()
     const p = getPos(e); const s = start.current

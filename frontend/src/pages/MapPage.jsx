@@ -48,6 +48,8 @@ export default function MapPage() {
     })()
   }, [id, currentPage])
 
+  const pinchDistanceRef = useRef(null)
+
   const { bgRef, drawRef, loadImage, onDown, onMove, onUp, hasPendingCorner, cancelDrawing, imageSize } = useMapCanvas({
     mappings,
     onDrawn: (rect) => {
@@ -90,6 +92,45 @@ export default function MapPage() {
     toast.success(isNew ? 'Mapping added' : 'Mapping updated')
   }, [])
 
+  const getTouchDistance = useCallback((touches) => {
+    if (touches.length < 2) return 0
+    const dx = touches[0].clientX - touches[1].clientX
+    const dy = touches[0].clientY - touches[1].clientY
+    return Math.hypot(dx, dy)
+  }, [])
+
+  const handleCanvasWheel = useCallback((e) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    setZoom((current) => {
+      const delta = e.deltaY < 0 ? 0.05 : -0.05
+      return Number(Math.min(4, Math.max(0.5, current + delta)).toFixed(2))
+    })
+  }, [])
+
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches?.length === 2) {
+      e.preventDefault()
+      pinchDistanceRef.current = getTouchDistance(e.touches)
+    }
+  }, [getTouchDistance])
+
+  const handleTouchMove = useCallback((e) => {
+    if (e.touches?.length === 2 && pinchDistanceRef.current) {
+      e.preventDefault()
+      const distance = getTouchDistance(e.touches)
+      const ratio = distance / pinchDistanceRef.current
+      pinchDistanceRef.current = distance
+      setZoom((current) => Number(Math.min(4, Math.max(0.5, current * ratio)).toFixed(2)))
+    }
+  }, [getTouchDistance])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!e.touches || e.touches.length < 2) {
+      pinchDistanceRef.current = null
+    }
+  }, [])
+
   const handleDeleted = useCallback((mid) => {
     setMappings(prev => prev.filter(m => m.id !== mid))
     setModalData(null)
@@ -119,6 +160,9 @@ export default function MapPage() {
     ? Math.min(imageSize.width, Math.max(1, canvasAreaWidth - 48))
     : 0
   const displayWidth = fitWidth ? Math.round(fitWidth * zoom) : undefined
+  const displayHeight = displayWidth && imageSize
+    ? Math.round(imageSize.height * displayWidth / imageSize.width)
+    : undefined
   const zoomPct = Math.round(zoom * 100)
   const zoomIn = () => setZoom(z => Math.min(4, Number((z + 0.25).toFixed(2))))
   const zoomOut = () => setZoom(z => Math.max(0.5, Number((z - 0.25).toFixed(2))))
@@ -196,13 +240,20 @@ export default function MapPage() {
               position: 'relative',
               display: imgLoaded ? 'inline-block' : 'none',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              width: '100%',
-              maxWidth: 'none',
+              width: displayWidth ? `${displayWidth}px` : '100%',
+              height: displayHeight ? `${displayHeight}px` : 'auto',
+              maxWidth: '100%',
+              maxHeight: '100%',
               flexShrink: 0,
               margin: '0 auto',
+              touchAction: 'none',
             }}
+            onWheel={handleCanvasWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
-            <canvas ref={bgRef} style={{ display: 'block', width: '100%', maxWidth: 'none' }} />
+            <canvas ref={bgRef} style={{ display: 'block', width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none' }} />
             <canvas
               ref={drawRef}
               style={{
@@ -212,7 +263,8 @@ export default function MapPage() {
                 width: '100%',
                 height: '100%',
                 maxWidth: 'none',
-                touchAction: mode === 'draw' ? 'pan-x pan-y' : 'manipulation',
+                maxHeight: 'none',
+                touchAction: mode === 'draw' ? 'none' : 'manipulation',
               }}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
               onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
