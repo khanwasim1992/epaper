@@ -23,7 +23,7 @@ export default function MapPage() {
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0)
 
   const colorCountRef = useRef(0)
-  const canvasAreaRef = useRef(null)
+  const resizeCleanupRef = useRef(null)
 
   // Load epaper + pages once
   useEffect(() => {
@@ -69,8 +69,18 @@ export default function MapPage() {
     loadImage(epaperApi.pageImageUrl(id, currentPage)).then(() => setImgLoaded(true))
   }, [epaper, pages, currentPage, id])
 
-  useEffect(() => {
-    const el = canvasAreaRef.current
+  // Callback ref (not a plain useRef + one-time useEffect): the canvas area
+  // div only mounts once `epaper` finishes loading, which happens *after*
+  // the component's first render. A `useEffect(..., [])` would run before
+  // that div exists, find a null ref, bail out, and never run again -
+  // leaving canvasAreaWidth stuck at 0 forever. A callback ref instead
+  // fires exactly when React attaches/detaches the real DOM node, no
+  // matter how late that is.
+  const canvasAreaRef = useCallback((el) => {
+    if (resizeCleanupRef.current) {
+      resizeCleanupRef.current()
+      resizeCleanupRef.current = null
+    }
     if (!el) return
 
     const updateWidth = () => setCanvasAreaWidth(el.clientWidth)
@@ -78,12 +88,13 @@ export default function MapPage() {
 
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', updateWidth)
-      return () => window.removeEventListener('resize', updateWidth)
+      resizeCleanupRef.current = () => window.removeEventListener('resize', updateWidth)
+      return
     }
 
     const observer = new ResizeObserver(updateWidth)
     observer.observe(el)
-    return () => observer.disconnect()
+    resizeCleanupRef.current = () => observer.disconnect()
   }, [])
 
   const handleSaved = useCallback((saved, isNew) => {
