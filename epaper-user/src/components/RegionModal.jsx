@@ -9,7 +9,8 @@ const absoluteUrl = (path) => {
 // Helper to generate the URL path for the dedicated news clipping page
 const clippingPagePath = ({ epaperId, pageNum, title, x, y, w, h }) => {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'news'
-  return `/news/${epaperId}/${pageNum}/${slug}?x=${x}&y=${y}&w=${w}&h=${h}&title=${encodeURIComponent(title)}`
+  const crop = [Math.round(x), Math.round(y), Math.round(w), Math.round(h)].join('-')
+  return `/news/${epaperId}/${pageNum}/${slug}/${crop}`
 }
 
 const COLORS = ['#4f8ef7','#34d399','#f97316','#e879f9','#fbbf24','#60a5fa','#a78bfa','#fb7185']
