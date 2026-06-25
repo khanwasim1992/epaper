@@ -129,9 +129,14 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
     if meta_text:
         text_lines.append(meta_text)
 
+    base_font_size = max(14, int(crop.width * 0.02))
     try:
-        base_font_size = max(14, int(crop.width * 0.02))
-        font = ImageFont.truetype("arial.ttf", base_font_size)
+        # "arial.ttf" is a Windows font and is almost never present on a
+        # Linux server, so this used to silently fall back every time in
+        # production. Pillow ships its own scalable font (no system fonts
+        # required) via load_default(size=...) since Pillow 10.1 - use that
+        # directly so the header text renders at the intended size everywhere.
+        font = ImageFont.load_default(size=base_font_size)
     except Exception:
         font = ImageFont.load_default()
 
@@ -153,7 +158,10 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
         for line in text_lines:
             if not line:
                 continue
-            width, height = draw.textsize(line, font=font)
+            # draw.textsize() was removed in Pillow 10.0; textbbox is the
+            # supported replacement for measuring rendered text size.
+            bbox = draw.textbbox((0, 0), line, font=font)
+            height = bbox[3] - bbox[1]
             text_x = padding
             draw.text((text_x, text_y), line, fill=(35, 35, 35), font=font)
             text_y += height + 4
