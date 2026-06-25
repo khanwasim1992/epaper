@@ -15,6 +15,9 @@ export const publicApi = {
   cropUrl: (epaperId, pageNum, x, y, w, h) =>
     `/api/epapers/${epaperId}/crop/${pageNum}/${Math.round(x)}-${Math.round(y)}-${Math.round(w)}-${Math.round(h)}`,
 
+  cropQueryUrl: (epaperId, pageNum, x, y, w, h) =>
+    `/api/epapers/${epaperId}/crop/${pageNum}?x=${Math.round(x)}&y=${Math.round(y)}&w=${Math.round(w)}&h=${Math.round(h)}`,
+
   pdfUrl: (epaperId) =>
     `/api/epapers/${epaperId}/pdf`,
 }

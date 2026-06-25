@@ -104,7 +104,8 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
     setCopied(false)
     cropFileRef.current = null
     touchStartRef.current = null
-  }, [region])
+    setCropSrc(cropUrl)
+  }, [region, cropUrl])
 
   useEffect(() => {
     const handler = (e) => e.key === 'Escape' && onClose()
@@ -119,6 +120,8 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   if (!region || !epaper) return null
 
   const cropUrl = publicApi.cropUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
+  const fallbackCropUrl = publicApi.cropQueryUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
+  const [cropSrc, setCropSrc] = useState(cropUrl)
   const color = getColor(region.color_idx ?? 0)
   const shareTitle = region.label || epaper.title || 'ePaper news'
   const shareText = region.notes ? `${shareTitle} - ${region.notes}` : shareTitle
@@ -257,7 +260,11 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   }
   const getCropFile = async () => {
     if (cropFileRef.current) return cropFileRef.current
-    const response = await fetch(cropUrl)
+    let response = await fetch(cropSrc)
+    if (!response.ok && cropSrc !== fallbackCropUrl) {
+      response = await fetch(fallbackCropUrl)
+      if (response.ok) setCropSrc(fallbackCropUrl)
+    }
     if (!response.ok) throw new Error('Could not load clipping image')
     const blob = await response.blob()
     const file = new File([blob], downloadName, { type: blob.type || 'image/jpeg' })
@@ -302,6 +309,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const printClip = () => {
     const win = window.open('', '_blank', 'noopener,noreferrer')
     if (!win) return
+    const printUrl = cropSrc || cropUrl
     win.document.write(`
       <!doctype html>
       <html>
@@ -315,7 +323,7 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
         </head>
         <body>
           <h1>${shareTitle}</h1>
-          <img src="${cropUrl}" alt="${shareTitle}" onload="window.print(); window.close();" />
+          <img src="${printUrl}" alt="${shareTitle}" onload="window.print(); window.close();" />
         </body>
       </html>
     `)
@@ -497,9 +505,12 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
           }}
         >
           <img
-            src={cropUrl}
+            src={cropSrc}
             alt={region.label}
             draggable={false}
+            onError={() => {
+              if (cropSrc !== fallbackCropUrl) setCropSrc(fallbackCropUrl)
+            }}
             style={{
               maxWidth: '100%',
               maxHeight: '60vh',
