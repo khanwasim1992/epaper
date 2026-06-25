@@ -23,7 +23,7 @@ export default function MapPage() {
   const [canvasAreaWidth, setCanvasAreaWidth] = useState(0)
 
   const colorCountRef = useRef(0)
-  const resizeCleanupRef = useRef(null)
+  const canvasAreaRef = useRef(null)
 
   // Load epaper + pages once
   useEffect(() => {
@@ -69,18 +69,8 @@ export default function MapPage() {
     loadImage(epaperApi.pageImageUrl(id, currentPage)).then(() => setImgLoaded(true))
   }, [epaper, pages, currentPage, id])
 
-  // Callback ref (not a plain useRef + one-time useEffect): the canvas area
-  // div only mounts once `epaper` finishes loading, which happens *after*
-  // the component's first render. A `useEffect(..., [])` would run before
-  // that div exists, find a null ref, bail out, and never run again -
-  // leaving canvasAreaWidth stuck at 0 forever. A callback ref instead
-  // fires exactly when React attaches/detaches the real DOM node, no
-  // matter how late that is.
-  const canvasAreaRef = useCallback((el) => {
-    if (resizeCleanupRef.current) {
-      resizeCleanupRef.current()
-      resizeCleanupRef.current = null
-    }
+  useEffect(() => {
+    const el = canvasAreaRef.current
     if (!el) return
 
     const updateWidth = () => setCanvasAreaWidth(el.clientWidth)
@@ -88,13 +78,12 @@ export default function MapPage() {
 
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', updateWidth)
-      resizeCleanupRef.current = () => window.removeEventListener('resize', updateWidth)
-      return
+      return () => window.removeEventListener('resize', updateWidth)
     }
 
     const observer = new ResizeObserver(updateWidth)
     observer.observe(el)
-    resizeCleanupRef.current = () => observer.disconnect()
+    return () => observer.disconnect()
   }, [])
 
   const handleSaved = useCallback((saved, isNew) => {
@@ -253,8 +242,6 @@ export default function MapPage() {
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               width: displayWidth ? `${displayWidth}px` : '100%',
               height: displayHeight ? `${displayHeight}px` : 'auto',
-              maxWidth: '100%',
-              maxHeight: '100%',
               flexShrink: 0,
               margin: '0 auto',
               touchAction: 'none',

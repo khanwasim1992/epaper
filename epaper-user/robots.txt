@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://epaper.wachaklokshahicha.com/sitemap.xml
