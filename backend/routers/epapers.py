@@ -459,6 +459,57 @@ async def delete_mapping(
 #  Crop
 # ─────────────────────────────────────────────
 
+def _parse_crop_segment(crop_segment: str):
+    parts = crop_segment.split('-')
+    if len(parts) != 4:
+        raise HTTPException(400, "Invalid crop coordinates")
+    try:
+        return [int(float(part)) for part in parts]
+    except ValueError:
+        raise HTTPException(400, "Invalid crop coordinates")
+
+
+async def _render_cropped_image(pg: EpaperPage, page_num: int, x: int, y: int, w: int, h: int):
+    edition_date = pg.epaper.edition_date if pg.epaper else None
+    from PIL import Image
+
+    with Image.open(pg.image_path) as img:
+        x1, y1 = max(0, x), max(0, y)
+        x2, y2 = min(img.width, x + w), min(img.height, y + h)
+        if x2 <= x1 or y2 <= y1:
+            raise HTTPException(400, "Invalid crop area")
+
+        cropped = _brand_crop_with_logo(img.crop((x1, y1, x2, y2)), page_num=page_num, edition_date=edition_date)
+        img_byte_arr = io.BytesIO()
+        cropped.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        return StreamingResponse(img_byte_arr, media_type="image/png")
+
+
+@router.get("/{epaper_id}/crop/{page_num}/{crop_segment}")
+async def crop_region_by_path(
+    epaper_id: int, page_num: int, crop_segment: str,
+    db: AsyncSession = Depends(get_db),
+    token: Optional[str] = None,
+):
+    if token:
+        from core.security import decode_token
+        try:
+            decode_token(token)
+        except Exception:
+            raise HTTPException(401, "Invalid token")
+
+    result = await db.execute(
+        select(EpaperPage).options(joinedload(EpaperPage.epaper)).where(EpaperPage.epaper_id == epaper_id, EpaperPage.page_num == page_num)
+    )
+    pg = result.scalar_one_or_none()
+    if not pg:
+        raise HTTPException(404, "Page not found")
+
+    x, y, w, h = _parse_crop_segment(crop_segment)
+    return await _render_cropped_image(pg, page_num, x, y, w, h)
+
+
 @router.get("/{epaper_id}/crop/{page_num}")
 async def crop_region(
     epaper_id: int, page_num: int,
@@ -480,20 +531,7 @@ async def crop_region(
     if not pg:
         raise HTTPException(404, "Page not found")
 
-    edition_date = pg.epaper.edition_date if pg.epaper else None
-
-    from PIL import Image
-    with Image.open(pg.image_path) as img:
-        x1, y1 = max(0, int(x)), max(0, int(y))
-        x2, y2 = min(img.width, int(x + w)), min(img.height, int(y + h))
-        if x2 <= x1 or y2 <= y1:
-            raise HTTPException(400, "Invalid crop area")
-        
-        cropped = _brand_crop_with_logo(img.crop((x1, y1, x2, y2)), page_num=page_num, edition_date=edition_date)
-        img_byte_arr = io.BytesIO()
-        cropped.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
-        return StreamingResponse(img_byte_arr, media_type="image/png")
+    return await _render_cropped_image(pg, page_num, int(x), int(y), int(w), int(h))
 
 
 # ─────────────────────────────────────────────
