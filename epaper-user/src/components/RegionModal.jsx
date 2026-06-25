@@ -97,6 +97,12 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   const cropFileRef = useRef(null)
   const touchStartRef = useRef(null)
 
+  if (!region || !epaper) return null
+
+  const cropUrl = publicApi.cropUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
+  const fallbackCropUrl = publicApi.cropQueryUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
+  const [cropSrc, setCropSrc] = useState(cropUrl)
+
   useEffect(() => {
     setZoom(1)
     setPan({ x: 0, y: 0 })
@@ -116,12 +122,6 @@ export function RegionModal({ region, epaper, pageNum, onClose }) {
   useEffect(() => {
     zoomRef.current = zoom
   }, [zoom])
-
-  if (!region || !epaper) return null
-
-  const cropUrl = publicApi.cropUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
-  const fallbackCropUrl = publicApi.cropQueryUrl(epaper.id, pageNum, region.x, region.y, region.w, region.h)
-  const [cropSrc, setCropSrc] = useState(cropUrl)
   const color = getColor(region.color_idx ?? 0)
   const shareTitle = region.label || epaper.title || 'ePaper news'
   const shareText = region.notes ? `${shareTitle} - ${region.notes}` : shareTitle
