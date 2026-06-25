@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 from pydantic import BaseModel
 
 from core.database import get_db
@@ -104,26 +105,59 @@ async def _epaper_out(ep: Epaper, db: AsyncSession) -> EpaperOut:
     return d
 
 
-def _brand_crop_with_logo(cropped):
+def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date: Optional[str] = None):
     logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
     if not logo_path.exists():
         return cropped
 
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageDraw, ImageFont
 
     crop = cropped.convert("RGB")
-    header_height = max(76, min(150, int(crop.width * 0.18)))
-    padding = max(12, header_height // 6)
+    header_height = max(110, min(170, int(crop.width * 0.22)))
+    padding = max(12, header_height // 8)
+
+    website_url = "epaper.wachaklokshahicha.com"
+    meta_text = ""
+    if edition_date and page_num is not None:
+        meta_text = f"{edition_date} · Page {page_num}"
+    elif edition_date:
+        meta_text = edition_date
+    elif page_num is not None:
+        meta_text = f"Page {page_num}"
+
+    text_lines = [website_url]
+    if meta_text:
+        text_lines.append(meta_text)
+
+    try:
+        base_font_size = max(14, int(crop.width * 0.02))
+        font = ImageFont.truetype("arial.ttf", base_font_size)
+    except Exception:
+        font = ImageFont.load_default()
 
     with Image.open(logo_path) as logo_img:
         logo = logo_img.convert("RGBA")
-        logo.thumbnail((max(1, crop.width - padding * 2), max(1, header_height - padding * 2)), Image.Resampling.LANCZOS)
+        logo_max_height = max(1, int(header_height * 0.45))
+        logo.thumbnail((max(1, crop.width - padding * 2), logo_max_height), Image.Resampling.LANCZOS)
 
         branded = Image.new("RGB", (crop.width, crop.height + header_height), "white")
         logo_x = (crop.width - logo.width) // 2
-        logo_y = (header_height - logo.height) // 2
+        logo_y = padding
         branded.paste(logo, (logo_x, logo_y), logo)
-        ImageDraw.Draw(branded).line((0, header_height - 1, crop.width, header_height - 1), fill=(225, 225, 225))
+
+        draw = ImageDraw.Draw(branded)
+        line_y = header_height - 1
+        draw.line((0, line_y, crop.width, line_y), fill=(225, 225, 225))
+
+        text_y = logo_y + logo.height + padding // 2
+        for line in text_lines:
+            if not line:
+                continue
+            width, height = draw.textsize(line, font=font)
+            text_x = padding
+            draw.text((text_x, text_y), line, fill=(35, 35, 35), font=font)
+            text_y += height + 4
+
         branded.paste(crop, (0, header_height))
         return branded
 
@@ -440,11 +474,13 @@ async def crop_region(
             raise HTTPException(401, "Invalid token")
 
     result = await db.execute(
-        select(EpaperPage).where(EpaperPage.epaper_id == epaper_id, EpaperPage.page_num == page_num)
+        select(EpaperPage).options(joinedload(EpaperPage.epaper)).where(EpaperPage.epaper_id == epaper_id, EpaperPage.page_num == page_num)
     )
     pg = result.scalar_one_or_none()
     if not pg:
         raise HTTPException(404, "Page not found")
+
+    edition_date = pg.epaper.edition_date if pg.epaper else None
 
     from PIL import Image
     with Image.open(pg.image_path) as img:
@@ -453,7 +489,7 @@ async def crop_region(
         if x2 <= x1 or y2 <= y1:
             raise HTTPException(400, "Invalid crop area")
         
-        cropped = _brand_crop_with_logo(img.crop((x1, y1, x2, y2)))
+        cropped = _brand_crop_with_logo(img.crop((x1, y1, x2, y2)), page_num=page_num, edition_date=edition_date)
         img_byte_arr = io.BytesIO()
         cropped.save(img_byte_arr, format='PNG')
         img_byte_arr.seek(0)
