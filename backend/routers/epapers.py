@@ -658,30 +658,20 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
     """
     Dynamic Open Graph / Twitter Card image for the homepage. index.html's
     og:image/twitter:image point here instead of a static logo file, so a
-    link share shows today's actual front page rather than just the
-    masthead.
+    link share actually shows today's front page (with the same logo +
+    site URL + edition date footer used on article clip shares) rather
+    than just the masthead.
 
-    Uses a portrait canvas + "cover" crop (fills the frame completely,
-    cropped from the top) rather than "contain" (shrink-to-fit, padded
-    with whitespace) - a newspaper front page is portrait and the old
-    1200x630 landscape "contain" version produced a tiny floating
-    thumbnail surrounded by white space in chat link previews. Cropping
-    from the top keeps the masthead/lead headline visible, matching how
-    other epaper sites' share previews look.
-
-    Note: Facebook/WhatsApp/Telegram cache a URL's preview image
+    Note: Facebook/WhatsApp/Telegram etc. cache a URL's preview image
     aggressively, often for a long time, and the homepage URL itself
     doesn't change day to day - so a fresh share may still need the
-    platform's cache cleared (e.g. Facebook's Sharing Debugger, or
-    WhatsApp simply takes a while to re-scrape) to pick up a newer
-    edition immediately. Cache-Control below is kept short to help, but
-    can't override a platform's own cache policy.
+    platform's cache cleared (e.g. Facebook's Sharing Debugger) to pick
+    up a newer edition immediately. Cache-Control below is kept short to
+    help, but can't override a platform's own cache policy.
     """
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image
 
-    CANVAS_W, CANVAS_H = 1200, 1500  # portrait card, ~4:5
-    HEADER_H = 160
-
+    CANVAS_W, CANVAS_H = 1200, 630
     canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), "white")
 
     result = await db.execute(
@@ -692,7 +682,7 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
     )
     ep = result.scalars().first()
 
-    page_img = None
+    content_img = None
     if ep:
         page_result = await db.execute(
             select(EpaperPage).where(
@@ -704,49 +694,26 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
         if pg:
             img_path = Path(pg.image_path)
             if img_path.exists():
-                page_img = Image.open(img_path).convert("RGB")
+                with Image.open(img_path) as page_img:
+                    content_img = _brand_crop_with_logo(
+                        page_img.convert("RGB"), page_num=1, edition_date=ep.edition_date
+                    )
 
-    # ── Header: masthead logo, centered ──
-    logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
-    if logo_path.exists():
-        with Image.open(logo_path) as logo_src:
-            logo = logo_src.convert("RGBA")
-            logo_max_h = int(HEADER_H * 0.55)
-            logo_max_w = int(CANVAS_W * 0.8)
-            scale = min(logo_max_w / logo.width, logo_max_h / logo.height)
-            logo_resized = logo.resize(
-                (max(1, round(logo.width * scale)), max(1, round(logo.height * scale))),
-                Image.Resampling.LANCZOS,
-            )
-            canvas.paste(
-                logo_resized,
-                ((CANVAS_W - logo_resized.width) // 2, (HEADER_H - logo_resized.height) // 2),
-                logo_resized,
-            )
+    if content_img is None:
+        # No published edition yet (or its image is missing) - fall back to
+        # just the masthead logo so the endpoint still returns something
+        # sensible instead of a blank canvas.
+        logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
+        if logo_path.exists():
+            with Image.open(logo_path) as logo_img:
+                content_img = logo_img.convert("RGB")
 
-    draw = ImageDraw.Draw(canvas)
-    draw.line((0, HEADER_H - 1, CANVAS_W, HEADER_H - 1), fill=(225, 225, 225))
-
-    content_area_h = CANVAS_H - HEADER_H
-
-    if page_img is not None:
-        # Cover-fit: scale so the page completely fills the content area in
-        # at least one dimension, then crop the overflow. Newspaper pages
-        # are tall/portrait, so scaling to match canvas width and cropping
-        # excess height (from the top) is the common case.
-        scale = max(CANVAS_W / page_img.width, content_area_h / page_img.height)
-        scaled_w = max(1, round(page_img.width * scale))
-        scaled_h = max(1, round(page_img.height * scale))
-        page_resized = page_img.resize((scaled_w, scaled_h), Image.Resampling.LANCZOS)
-
-        crop_x = (scaled_w - CANVAS_W) // 2
-        crop_y = 0  # anchor to top so the lead headline stays visible
-        page_cropped = page_resized.crop((crop_x, crop_y, crop_x + CANVAS_W, crop_y + content_area_h))
-        canvas.paste(page_cropped, (0, HEADER_H))
-    else:
-        # No published edition yet - leave the area below the header blank
-        # rather than guessing at content.
-        pass
+    if content_img is not None:
+        scale = min(CANVAS_W / content_img.width, CANVAS_H / content_img.height)
+        new_w = max(1, int(content_img.width * scale))
+        new_h = max(1, int(content_img.height * scale))
+        resized = content_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        canvas.paste(resized, ((CANVAS_W - new_w) // 2, (CANVAS_H - new_h) // 2))
 
     buf = io.BytesIO()
     canvas.save(buf, format="PNG")
