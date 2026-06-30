@@ -253,8 +253,17 @@ export default function MapPage() {
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               width: displayWidth ? `${displayWidth}px` : '100%',
               height: displayHeight ? `${displayHeight}px` : 'auto',
-              maxWidth: '100%',
-              maxHeight: '100%',
+              // DO NOT add maxWidth/maxHeight: '100%' here. displayWidth/
+              // displayHeight above are already computed from zoom +
+              // available container width, preserving the image's true
+              // aspect ratio. A max-width/max-height clamp fights that:
+              // it caps width and height independently of each other,
+              // which (a) breaks zoom-in past whatever point the clamp
+              // triggers, and (b) distorts the aspect ratio when only one
+              // dimension gets clamped (most visible on wide-but-short
+              // desktop viewports vs. tall mobile ones). .map-canvas-area
+              // already has overflow:auto, so zoomed content scrolls
+              // instead of needing to be clamped.
               flexShrink: 0,
               margin: '0 auto',
               touchAction: 'none',

@@ -651,3 +651,75 @@ async def public_available_dates(db: AsyncSession = Depends(get_db)):
         ).order_by(Epaper.edition_date.desc())
     )
     return [row[0] for row in result.all()]
+
+
+@router.get("/public/social-preview.png")
+async def public_social_preview(db: AsyncSession = Depends(get_db)):
+    """
+    Dynamic Open Graph / Twitter Card image for the homepage. index.html's
+    og:image/twitter:image point here instead of a static logo file, so a
+    link share actually shows today's front page (with the same logo +
+    site URL + edition date footer used on article clip shares) rather
+    than just the masthead.
+
+    Note: Facebook/WhatsApp/Telegram etc. cache a URL's preview image
+    aggressively, often for a long time, and the homepage URL itself
+    doesn't change day to day - so a fresh share may still need the
+    platform's cache cleared (e.g. Facebook's Sharing Debugger) to pick
+    up a newer edition immediately. Cache-Control below is kept short to
+    help, but can't override a platform's own cache policy.
+    """
+    from PIL import Image
+
+    CANVAS_W, CANVAS_H = 1200, 630
+    canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), "white")
+
+    result = await db.execute(
+        select(Epaper).where(
+            Epaper.is_published == True,
+            Epaper.is_extracted == True,
+        ).order_by(Epaper.edition_date.desc(), Epaper.id.desc())
+    )
+    ep = result.scalars().first()
+
+    content_img = None
+    if ep:
+        page_result = await db.execute(
+            select(EpaperPage).where(
+                EpaperPage.epaper_id == ep.id,
+                EpaperPage.page_num == 1,
+            )
+        )
+        pg = page_result.scalar_one_or_none()
+        if pg:
+            img_path = Path(pg.image_path)
+            if img_path.exists():
+                with Image.open(img_path) as page_img:
+                    content_img = _brand_crop_with_logo(
+                        page_img.convert("RGB"), page_num=1, edition_date=ep.edition_date
+                    )
+
+    if content_img is None:
+        # No published edition yet (or its image is missing) - fall back to
+        # just the masthead logo so the endpoint still returns something
+        # sensible instead of a blank canvas.
+        logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
+        if logo_path.exists():
+            with Image.open(logo_path) as logo_img:
+                content_img = logo_img.convert("RGB")
+
+    if content_img is not None:
+        scale = min(CANVAS_W / content_img.width, CANVAS_H / content_img.height)
+        new_w = max(1, int(content_img.width * scale))
+        new_h = max(1, int(content_img.height * scale))
+        resized = content_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        canvas.paste(resized, ((CANVAS_W - new_w) // 2, (CANVAS_H - new_h) // 2))
+
+    buf = io.BytesIO()
+    canvas.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=900"},
+    )
