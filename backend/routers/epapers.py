@@ -751,10 +751,14 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
         pass
 
     buf = io.BytesIO()
-    canvas.save(buf, format="PNG")
+    # JPEG not PNG: WhatsApp's crawler has a hard ~300KB limit on preview
+    # images and silently shows no preview if exceeded. A 1200x1500 PNG of
+    # a real newspaper page (dense text + photos) is typically 800KB-2MB.
+    # JPEG quality=75 keeps it well under 300KB with acceptable quality.
+    canvas.save(buf, format="JPEG", quality=75, optimize=True)
     buf.seek(0)
     return StreamingResponse(
         buf,
-        media_type="image/png",
+        media_type="image/jpeg",
         headers={"Cache-Control": "public, max-age=900"},
     )
