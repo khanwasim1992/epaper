@@ -121,8 +121,7 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
     from PIL import Image, ImageDraw, ImageFont
 
     crop = cropped.convert("RGB")
-    header_height = max(110, min(170, int(crop.width * 0.22)))
-    padding = max(12, header_height // 8)
+    padding = max(12, int(crop.width * 0.02))
 
     website_url = "epaper.wachaklokshahicha.com"
     meta_text = ""
@@ -145,10 +144,22 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
 
     with Image.open(logo_path) as logo_img:
         logo = logo_img.convert("RGBA")
-        logo_max_height = max(1, int(header_height * 0.45))
+        logo_max_height = max(1, int(crop.width * 0.20))
         logo.thumbnail((max(1, crop.width - padding * 2), logo_max_height), Image.Resampling.LANCZOS)
 
+        # measure total text height based on all lines
+        dummy_draw = ImageDraw.Draw(crop)
+        text_heights = []
+        for line in text_lines:
+            if not line:
+                continue
+            bbox = dummy_draw.textbbox((0, 0), line, font=font)
+            text_heights.append(bbox[3] - bbox[1])
+        text_block_height = sum(text_heights) + max(0, len(text_heights) - 1) * 6
+
+        header_height = max(140, logo.height + padding + text_block_height + padding)
         branded = Image.new("RGB", (crop.width, crop.height + header_height), "white")
+
         logo_x = (crop.width - logo.width) // 2
         logo_y = padding
         branded.paste(logo, (logo_x, logo_y), logo)
@@ -166,7 +177,7 @@ def _brand_crop_with_logo(cropped, page_num: Optional[int] = None, edition_date:
             height = bbox[3] - bbox[1]
             text_x = max(padding, (crop.width - width) // 2)
             draw.text((text_x, text_y), line, fill=(35, 35, 35), font=font)
-            text_y += height + 4
+            text_y += height + 6
 
         branded.paste(crop, (0, header_height))
         return branded
