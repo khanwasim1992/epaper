@@ -656,24 +656,32 @@ async def public_available_dates(db: AsyncSession = Depends(get_db)):
 @router.get("/public/social-preview.png")
 async def public_social_preview(db: AsyncSession = Depends(get_db)):
     """
-    Dynamic Open Graph / Twitter Card image for the homepage. index.html's
-    og:image/twitter:image point here instead of a static logo file, so a
-    link share actually shows today's front page (with the same logo +
-    site URL + edition date footer used on article clip shares) rather
-    than just the masthead.
+    Dynamic OG/Twitter Card preview image for the homepage.
 
-    Note: Facebook/WhatsApp/Telegram etc. cache a URL's preview image
-    aggressively, often for a long time, and the homepage URL itself
-    doesn't change day to day - so a fresh share may still need the
-    platform's cache cleared (e.g. Facebook's Sharing Debugger) to pick
-    up a newer edition immediately. Cache-Control below is kept short to
-    help, but can't override a platform's own cache policy.
+    Layout: thin logo header strip on top, then the front page fills the
+    remaining area edge-to-edge with zero white padding.
+
+    Key fix vs earlier version: uses max() not min() for the scale factor
+    ("cover" fit, like CSS object-fit:cover) so the portrait newspaper
+    page always fills the full canvas WIDTH. min() ("contain" fit) was
+    producing a ~400px-wide strip centered in a 1200px canvas with ~400px
+    of white on each side because a portrait page scaled to fit a
+    landscape frame ends up much narrower than the frame.
+
+    Canvas is 1200x1500 (portrait) so the newspaper page fills it
+    naturally; og:image:height in index.html must stay 1500 to match.
     """
-    from PIL import Image
+    from PIL import Image, ImageDraw, ImageFont
 
-    CANVAS_W, CANVAS_H = 1200, 630
+    # Portrait canvas — newspaper pages are portrait; fitting them into a
+    # landscape (1200x630) frame is what caused the side-whitespace.
+    # index.html og:image:height MUST match this value (1500).
+    CANVAS_W, CANVAS_H = 1200, 1500
+    HEADER_H = 150   # logo strip height at the top
+
     canvas = Image.new("RGB", (CANVAS_W, CANVAS_H), "white")
 
+    # ── fetch latest published edition ──────────────────────────────────
     result = await db.execute(
         select(Epaper).where(
             Epaper.is_published == True,
@@ -682,7 +690,7 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
     )
     ep = result.scalars().first()
 
-    content_img = None
+    page_img = None
     if ep:
         page_result = await db.execute(
             select(EpaperPage).where(
@@ -694,26 +702,53 @@ async def public_social_preview(db: AsyncSession = Depends(get_db)):
         if pg:
             img_path = Path(pg.image_path)
             if img_path.exists():
-                with Image.open(img_path) as page_img:
-                    content_img = _brand_crop_with_logo(
-                        page_img.convert("RGB"), page_num=1, edition_date=ep.edition_date
-                    )
+                page_img = Image.open(img_path).convert("RGB")
 
-    if content_img is None:
-        # No published edition yet (or its image is missing) - fall back to
-        # just the masthead logo so the endpoint still returns something
-        # sensible instead of a blank canvas.
-        logo_path = Path(__file__).resolve().parents[2] / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
-        if logo_path.exists():
-            with Image.open(logo_path) as logo_img:
-                content_img = logo_img.convert("RGB")
+    # ── logo header strip ────────────────────────────────────────────────
+    logo_path = (
+        Path(__file__).resolve().parents[2]
+        / "epaper-user" / "src" / "assets" / "wachak _logo.PNG"
+    )
+    if logo_path.exists():
+        with Image.open(logo_path) as logo_src:
+            logo = logo_src.convert("RGBA")
+            max_logo_h = int(HEADER_H * 0.60)
+            max_logo_w = int(CANVAS_W * 0.80)
+            scale = min(max_logo_w / logo.width, max_logo_h / logo.height)
+            logo = logo.resize(
+                (max(1, round(logo.width * scale)), max(1, round(logo.height * scale))),
+                Image.Resampling.LANCZOS,
+            )
+            canvas.paste(
+                logo,
+                ((CANVAS_W - logo.width) // 2, (HEADER_H - logo.height) // 2),
+                logo,
+            )
 
-    if content_img is not None:
-        scale = min(CANVAS_W / content_img.width, CANVAS_H / content_img.height)
-        new_w = max(1, int(content_img.width * scale))
-        new_h = max(1, int(content_img.height * scale))
-        resized = content_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        canvas.paste(resized, ((CANVAS_W - new_w) // 2, (CANVAS_H - new_h) // 2))
+    # thin separator line under the header
+    draw = ImageDraw.Draw(canvas)
+    draw.line((0, HEADER_H - 1, CANVAS_W, HEADER_H - 1), fill=(200, 200, 200))
+
+    # ── front page content — cover-fit, anchored top ─────────────────────
+    content_h = CANVAS_H - HEADER_H
+    if page_img is not None:
+        # Scale so the page fills the canvas WIDTH completely (cover fit).
+        # For a portrait page in a portrait frame, max() of the two scale
+        # ratios = the width ratio, so the page is full-width and excess
+        # height is cropped from the bottom. This eliminates all whitespace.
+        scale = max(CANVAS_W / page_img.width, content_h / page_img.height)
+        new_w = max(1, round(page_img.width * scale))
+        new_h = max(1, round(page_img.height * scale))
+        scaled = page_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+        # Crop to canvas size, horizontally centered, top-anchored
+        x_off = (new_w - CANVAS_W) // 2
+        cropped = scaled.crop((x_off, 0, x_off + CANVAS_W, content_h))
+        canvas.paste(cropped, (0, HEADER_H))
+    else:
+        # No published edition yet — the logo header alone is a clean
+        # fallback; leave the content area white rather than crashing.
+        pass
 
     buf = io.BytesIO()
     canvas.save(buf, format="PNG")
